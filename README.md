@@ -16,4 +16,4 @@ The website is built using [Quarto](https://quarto.org). The steps to build the 
 
 1. Activate the Python virtual environment: `source pyenv/bin/activate`
 2. Load the environment variables: `source _environment`
-3. Run Quarto: `quarto publish gh-pages`
+3. Run Quarto: `quarto publish gh-pages --no-browser`

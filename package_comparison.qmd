@@ -5,10 +5,6 @@ author: "Alberto Mercurio"
 engine: julia
 julia:
     env: ["JULIA_NUM_THREADS=16", "JULIA_CONDAPKG_BACKEND=Null", "JULIA_PYTHONCALL_EXE=pyenv/bin/python"]
-
-format:
-  html:
-    code-line-numbers: true
 ---
 
 # Performance Comparison of Quantum Simulation Packages: Julia vs. Python
@@ -18,7 +14,7 @@ Here we compare the performance of [`QuantumToolbox.jl`](https://github.com/quti
 - [`dynamiqs`](https://github.com/dynamiqs/dynamiqs) (Python - JAX)
 - [`QuantumOptics.jl`](https://github.com/qojulia/QuantumOptics.jl) (Julia)
 
-To allow reproducibility, this page is generated with [`Literate.jl`](https://github.com/fredrikekre/Literate.jl) based on [this envitonment](https://github.com/qutip/QuantumToolbox.jl/blob/main/benchmarks/package_comparison). Moreover, to keep the code clean, we use the [`PythonCall.jl`](https://github.com/JuliaPy/PythonCall.jl) package to call Python code from Julia. We tested that the overhead of calling Python code from Julia is negligible for the purpose of this benchmark.
+To allow reproducibility, this page is generated with [`Quarto`](https://quarto.org) based on [this repository](https://github.com/albertomercurio/QuantumToolbox-Benchmarks). Moreover, to keep the code clean, we use the [`PythonCall.jl`](https://github.com/JuliaPy/PythonCall.jl) package to call Python code from Julia. We tested that the overhead of calling Python code from Julia is negligible for the purpose of this benchmark.
 
 ## Importing the Required Packages
 
@@ -206,9 +202,7 @@ mesolve_times = [
 mcsolve_times =
     [1e-6 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_qutip, mesolve_quantumoptics]]
 
-#
-
-fig = Figure(size = (500, 300))
+fig = Figure(size = (700, 400))
 ax = Axis(
     fig[1, 1],
     xticks = (1:2, ["mesolve", "mcsolve"]),
@@ -229,22 +223,18 @@ barplot!(
 barplot!(ax, 2 * ones(length(mcsolve_times)), mcsolve_times, dodge = 1:length(mcsolve_times), color = colors[[1, 2, 4]])
 
 ylims!(ax, 0, nothing)
-```
 
-Legend
+# Legend
 
-```{julia}
 labels = ["QuantumToolbox.jl", "QuTiP", "dynamiqs", "QuantumOptics.jl"]
 elements = [PolyElement(polycolor = colors[i]) for i in 1:length(labels)]
 
 axislegend(ax, elements, labels, position = :lt)
 
-save("package_comparison.png", fig);
+save("package_comparison.png", fig, px_per_unit = 2.0)
 
-# fig
+fig
 ```
-
-![](package_comparison.png)
 
 ---
 
@@ -265,10 +255,18 @@ QuantumToolbox.about()
 ---
 
 ```{julia}
-qutip.about()
+# qutip.about() doesn't show anything
+
+# Capture the output
+pipe = Pipe()
+redirect_stdout(pipe) do
+    qutip.about() # Call the function while redirecting stdout
+end
+
+close(pipe)
+
+# Get the captured output as a string
+qutip_about = read(pipe, String)
 ```
 
 ---
-
-*This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
-
