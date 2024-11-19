@@ -7,8 +7,6 @@ julia:
     env: ["JULIA_NUM_THREADS=16", "JULIA_CONDAPKG_BACKEND=Null", "JULIA_PYTHONCALL_EXE=pyenv/bin/python"]
 ---
 
-# Performance Comparison of Quantum Simulation Packages: Julia vs. Python
-
 Here we compare the performance of [`QuantumToolbox.jl`](https://github.com/qutip/QuantumToolbox.jl) with other quantum simulation packages:
 - [`QuTiP`](https://github.com/qutip/qutip) (Python)
 - [`dynamiqs`](https://github.com/dynamiqs/dynamiqs) (Python - JAX)
@@ -255,18 +253,5 @@ QuantumToolbox.about()
 ---
 
 ```{julia}
-# qutip.about() doesn't show anything
-
-# Capture the output
-pipe = Pipe()
-redirect_stdout(pipe) do
-    qutip.about() # Call the function while redirecting stdout
-end
-
-close(pipe)
-
-# Get the captured output as a string
-qutip_about = read(pipe, String)
+qutip.about()
 ```
-
----
