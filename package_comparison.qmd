@@ -231,7 +231,7 @@ elements = [PolyElement(polycolor = colors[i]) for i in 1:length(labels)]
 
 axislegend(ax, elements, labels, position = :lt)
 
-save("package_comparison.png", fig, px_per_unit = 2.0)
+# save("package_comparison.png", fig, px_per_unit = 2.0)
 
 fig
 ```
