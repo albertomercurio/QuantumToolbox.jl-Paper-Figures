@@ -133,7 +133,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     </a>
     <ul class="dropdown-menu" aria-labelledby="nav-menu-quantumtoolbox.jl">    
         <li>
-    <a class="dropdown-item" href="../QuantumToolbox.jl/introduction.md">
+    <a class="dropdown-item" href="../QuantumToolbox.jl/introduction.html">
  <span class="dropdown-text">Introduction</span></a>
   </li>  
         <li>
@@ -262,14 +262,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-9"><a href="#cb5-9"></a></span>
 <span id="cb5-10"><a href="#cb5-10"></a>mesolve_quantumtoolbox <span class="op">=</span> <span class="pp">@benchmark</span> QuantumToolbox.<span class="fu">mesolve</span>(<span class="op">$</span>H, <span class="op">$</span>ψ<span class="fl">0</span>, <span class="op">$</span>tlist, <span class="op">$</span>c_ops, progress_bar <span class="op">=</span> <span class="fu">Val</span>(<span class="cn">false</span>)).states[<span class="fl">2</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>BenchmarkTools.Trial: 99 samples with 1 evaluation.
- Range (min … max):  48.960 ms … 59.754 ms  ┊ GC (min … max): 0.00% … 11.36%
- Time  (median):     49.980 ms              ┊ GC (median):    0.71%
- Time  (mean ± σ):   50.434 ms ±  1.526 ms  ┊ GC (mean ± σ):  0.72% ±  1.62%
+<pre><code>BenchmarkTools.Trial: 98 samples with 1 evaluation.
+ Range (min … max):  49.727 ms … 59.024 ms  ┊ GC (min … max): 0.00% … 10.74%
+ Time  (median):     51.027 ms              ┊ GC (median):    0.74%
+ Time  (mean ± σ):   51.394 ms ±  1.312 ms  ┊ GC (mean ± σ):  0.75% ±  1.59%
 
-     ▁▂▂▃█▄                                                    
-  ▃▅▄██████▇▆▄▁▃▁▃▃▃▁▃▁▃▄▁▁▃▄▄▃▅▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▃ ▁
-  49 ms           Histogram: frequency by time        56.7 ms &lt;
+       ▂▇▄█▂▁ ▄▁ ▂▂                                            
+  ▃▃▁▆▅██████▅██▅██▁▆▃▆▃▅▁▃▁▁▃▃▆▁▁▁▃▁▁▁▁▁▁▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▃ ▁
+  49.7 ms         Histogram: frequency by time        56.9 ms &lt;
 
  Memory estimate: 7.42 MiB, allocs estimate: 802.</code></pre>
 </div>
@@ -290,13 +290,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-10"><a href="#cb7-10"></a>mesolve_qutip <span class="op">=</span> <span class="pp">@benchmark</span> qutip.<span class="fu">mesolve</span>(<span class="op">$</span>H, <span class="op">$</span>ψ<span class="fl">0</span>, <span class="op">$</span>tlist, <span class="op">$</span>c_ops).states[<span class="fl">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>BenchmarkTools.Trial: 22 samples with 1 evaluation.
- Range (min … max):  229.770 ms … 247.773 ms  ┊ GC (min … max): 0.00% … 0.00%
- Time  (median):     230.863 ms               ┊ GC (median):    0.00%
- Time  (mean ± σ):   232.224 ms ±   4.070 ms  ┊ GC (mean ± σ):  0.00% ± 0.00%
+ Range (min … max):  229.170 ms … 246.174 ms  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     232.187 ms               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   234.916 ms ±   6.382 ms  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
-    █▅▂     ▂                                                    
-  █▅███▅▁▅▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅ ▁
-  230 ms           Histogram: frequency by time          248 ms &lt;
+  █▄     ▁                                         ▁             
+  ██▆▁▁▁▁█▁▁▆▆▆▁▆▆▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▆▁▁▆█▁▁▁▆▁▁▁▆▁▁▆ ▁
+  229 ms           Histogram: frequency by time          246 ms &lt;
 
  Memory estimate: 464 bytes, allocs estimate: 20.</code></pre>
 </div>
@@ -318,13 +318,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-11"><a href="#cb9-11"></a>    <span class="pp">@benchmark</span> dynamiqs.<span class="fu">mesolve</span>(<span class="op">$</span>H, <span class="op">$</span>c_ops, <span class="op">$</span>ψ<span class="fl">0</span>, <span class="op">$</span>tlist, options <span class="op">=</span> dynamiqs.<span class="fu">Options</span>(progress_meter <span class="op">=</span> <span class="cn">nothing</span>)).states</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>BenchmarkTools.Trial: 8 samples with 1 evaluation.
- Range (min … max):  459.675 ms … 732.906 ms  ┊ GC (min … max): 0.00% … 0.00%
- Time  (median):     727.591 ms               ┊ GC (median):    0.00%
- Time  (mean ± σ):   692.888 ms ±  94.482 ms  ┊ GC (mean ± σ):  0.00% ± 0.00%
+ Range (min … max):  467.509 ms … 733.467 ms  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     697.198 ms               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   675.551 ms ±  85.174 ms  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
-                                                             ▁█  
-  ▆▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▆▁▁▁██ ▁
-  460 ms           Histogram: frequency by time          733 ms &lt;
+                                                      █          
+  ▇▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▇█▇▁▁▁▇▁▁▇ ▁
+  468 ms           Histogram: frequency by time          733 ms &lt;
 
  Memory estimate: 1.45 KiB, allocs estimate: 66.</code></pre>
 </div>
@@ -346,14 +346,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb11-11"><a href="#cb11-11"></a></span>
 <span id="cb11-12"><a href="#cb11-12"></a>mesolve_quantumoptics <span class="op">=</span> <span class="pp">@benchmark</span> QuantumOptics.timeevolution.<span class="fu">master</span>(<span class="op">$</span>tlist, <span class="op">$</span>ψ<span class="fl">0</span>, <span class="op">$</span>H, <span class="op">$</span>c_ops)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>BenchmarkTools.Trial: 56 samples with 1 evaluation.
- Range (min … max):  87.550 ms … 94.416 ms  ┊ GC (min … max): 0.00% … 0.00%
- Time  (median):     89.395 ms              ┊ GC (median):    0.00%
- Time  (mean ± σ):   89.619 ms ±  1.469 ms  ┊ GC (mean ± σ):  0.14% ± 0.39%
+<pre><code>BenchmarkTools.Trial: 55 samples with 1 evaluation.
+ Range (min … max):  88.957 ms … 94.694 ms  ┊ GC (min … max): 0.00% … 0.80%
+ Time  (median):     91.237 ms              ┊ GC (median):    0.00%
+ Time  (mean ± σ):   91.237 ms ±  1.060 ms  ┊ GC (mean ± σ):  0.16% ± 0.43%
 
-      ▅ ▂    ▂ █            ▅     ▂ ▅                          
-  ▅▁▅▁█▅█▅▅▅▁███▅▅▁▁█▁▅▅█▁▁▅█▁▁▁█▅█▁█▅▁▁▁▁▁▅▁▅▁▅▁▁▁█▁▁▁▅▅▁▁▁▅ ▁
-  87.6 ms         Histogram: frequency by time        92.7 ms &lt;
+             ▃    ▃ ██▃   ▃ █ ▃▃█  █ █ ▃█  █                   
+  ▇▁▁▁▇▁▇▁▁▇▁█▁▁▁▇█▇███▇▇▇█▇█▁███▇▁█▁█▁██▁▇█▇▁▁▁▇▁▁▁▁▇▁▁▁▁▁▁▇ ▁
+  89 ms           Histogram: frequency by time        93.7 ms &lt;
 
  Memory estimate: 4.78 MiB, allocs estimate: 643.</code></pre>
 </div>
@@ -389,16 +389,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb15-10"><a href="#cb15-10"></a>mcsolve_quantumtoolbox <span class="op">=</span></span>
 <span id="cb15-11"><a href="#cb15-11"></a>    <span class="pp">@benchmark</span> QuantumToolbox.<span class="fu">mcsolve</span>(<span class="op">$</span>H, <span class="op">$</span>ψ<span class="fl">0</span>, <span class="op">$</span>tlist, <span class="op">$</span>c_ops, progress_bar <span class="op">=</span> <span class="fu">Val</span>(<span class="cn">false</span>), ntraj <span class="op">=</span> ntraj).states[<span class="fl">2</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
-<pre><code>BenchmarkTools.Trial: 98 samples with 1 evaluation.
- Range (min … max):  42.390 ms … 59.587 ms  ┊ GC (min … max): 0.00% … 2.47%
- Time  (median):     50.312 ms              ┊ GC (median):    0.00%
- Time  (mean ± σ):   51.039 ms ±  4.031 ms  ┊ GC (mean ± σ):  2.13% ± 3.26%
+<pre><code>BenchmarkTools.Trial: 99 samples with 1 evaluation.
+ Range (min … max):  43.906 ms … 66.015 ms  ┊ GC (min … max): 0.00% … 8.05%
+ Time  (median):     49.657 ms              ┊ GC (median):    0.00%
+ Time  (mean ± σ):   50.901 ms ±  4.656 ms  ┊ GC (mean ± σ):  2.68% ± 3.79%
 
-                 █▃▁     ▃ ▃▃▃   ▁      ▁ ▆    ▃    ▁      ▁   
-  ▄▁▁▁▁▄▇▁▁▁▄▇▁▁▇███▇▄▇▄▇█▄███▇▇▄█▄▇▄▄▄▇█▇█▁▁▄▁█▁▁▇▇█▄▇▇▇▁▁█▇ ▁
-  42.4 ms         Histogram: frequency by time        58.5 ms &lt;
+       ▃    █▁ ▄ ▄    ▃                                        
+  ▇▁▆▆▁█▄▆▆▇██▇█▇█▇▇▆▇█▁▆▇▆▄▆▄▆▆▆▆▁▆▄▁▄▆▁▁▆▁▁▄▁▄▁▁▁▁▁▄▁▁▄▁▁▁▄ ▁
+  43.9 ms         Histogram: frequency by time        65.3 ms &lt;
 
- Memory estimate: 13.87 MiB, allocs estimate: 45362.</code></pre>
+ Memory estimate: 13.88 MiB, allocs estimate: 45365.</code></pre>
 </div>
 </div>
 </section>
@@ -435,13 +435,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>BenchmarkTools.Trial: 5 samples with 1 evaluation.
- Range (min … max):  1.058 s …   1.088 s  ┊ GC (min … max): 0.00% … 0.00%
- Time  (median):     1.073 s              ┊ GC (median):    0.00%
- Time  (mean ± σ):   1.071 s ± 11.965 ms  ┊ GC (mean ± σ):  0.00% ± 0.00%
+ Range (min … max):  1.080 s …   1.107 s  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     1.084 s              ┊ GC (median):    0.00%
+ Time  (mean ± σ):   1.090 s ± 11.574 ms  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
-  █     █                     █    █                      █  
-  █▁▁▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█▁▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█ ▁
-  1.06 s         Histogram: frequency by time        1.09 s &lt;
+  ▁      █                          ▁                     ▁  
+  █▁▁▁▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█ ▁
+  1.08 s         Histogram: frequency by time        1.11 s &lt;
 
  Memory estimate: 1.95 KiB, allocs estimate: 51.</code></pre>
 </div>
@@ -473,15 +473,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb20-18"><a href="#cb20-18"></a>mesolve_quantumoptics <span class="op">=</span> <span class="pp">@benchmark</span> <span class="fu">quantumoptics_mcwf</span>(<span class="op">$</span>tlist, <span class="op">$</span>ψ<span class="fl">0</span>, <span class="op">$</span>H, <span class="op">$</span>c_ops, ntraj)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>BenchmarkTools.Trial: 77 samples with 1 evaluation.
- Range (min … max):  53.621 ms … 76.305 ms  ┊ GC (min … max): 15.28% … 14.61%
- Time  (median):     65.180 ms              ┊ GC (median):     9.60%
- Time  (mean ± σ):   65.392 ms ±  4.173 ms  ┊ GC (mean ± σ):  10.34% ±  3.27%
+ Range (min … max):  52.777 ms … 73.758 ms  ┊ GC (min … max):  0.00% … 12.88%
+ Time  (median):     65.308 ms              ┊ GC (median):    10.33%
+ Time  (mean ± σ):   65.271 ms ±  3.937 ms  ┊ GC (mean ± σ):  10.76% ±  3.69%
 
-                       ▂ ▅▅   █▅ ▂▂▂  ▂ ▅ ▅                    
-  ▅▁▅▁▁▁▁▁▁▁▁▁▅▁▁▁▅██▅▅█▅███▁████████████▁█▅█▅▅▁▅▅▅▅▅█▁▁▁▁▁▁▅ ▁
-  53.6 ms         Histogram: frequency by time        75.3 ms &lt;
+                             ▄       █▂▄   ▂      ▄            
+  ▄▄▁▁▁▁▁▁▁▁▁▁▁▁▁▄▄▄▄▄▄▄▁▁▁▁▁█▆▆▁█▄▄█████▄██▄█▆▄▄▄█▆▆▁▁▁▆▄▄▁▄ ▁
+  52.8 ms         Histogram: frequency by time        72.6 ms &lt;
 
- Memory estimate: 75.01 MiB, allocs estimate: 234199.</code></pre>
+ Memory estimate: 74.13 MiB, allocs estimate: 231699.</code></pre>
 </div>
 </div>
 </section>

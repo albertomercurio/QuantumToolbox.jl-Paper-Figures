@@ -198,6 +198,11 @@ window.Quarto = {
   <li><a href="#the-qutip-case" id="toc-the-qutip-case" class="nav-link" data-scroll-target="#the-qutip-case">The QuTiP case</a></li>
   <li><a href="#quantumtoolbox.jl-almost-the-same-syntax" id="toc-quantumtoolbox.jl-almost-the-same-syntax" class="nav-link" data-scroll-target="#quantumtoolbox.jl-almost-the-same-syntax">QuantumToolbox.jl: Almost the same syntax</a></li>
   </ul></li>
+  <li><a href="#the-quantumobject-struct" id="toc-the-quantumobject-struct" class="nav-link" data-scroll-target="#the-quantumobject-struct">The <code>QuantumObject</code> struct</a></li>
+  <li><a href="#large-hilbert-space-dimensions-the-need-for-gpu-acceleration" id="toc-large-hilbert-space-dimensions-the-need-for-gpu-acceleration" class="nav-link" data-scroll-target="#large-hilbert-space-dimensions-the-need-for-gpu-acceleration">Large Hilbert space dimensions: the need for GPU acceleration</a>
+  <ul class="collapse">
+  <li><a href="#the-vectorized-representation-of-the-density-matrix" id="toc-the-vectorized-representation-of-the-density-matrix" class="nav-link" data-scroll-target="#the-vectorized-representation-of-the-density-matrix">The vectorized representation of the density matrix</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -232,9 +237,9 @@ window.Quarto = {
 
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
-<p><a href="https://github.com/qutip/QuantumToolbox.jl">QuantumToolbox.jl</a> started during my Ph.D.&nbsp;from the need of a high-performance quantum simulation framework. I was already using <a href="https://github.com/qutip/qutip">QuTiP</a> (Quantum Toolbox in Python)</p>
+<p><a href="https://github.com/qutip/QuantumToolbox.jl">QuantumToolbox.jl</a> was born during my Ph.D., driven by the need for a high-performance framework for quantum simulations. At the time, I was already using <a href="https://github.com/qutip/qutip">QuTiP</a> (Quantum Toolbox in Python)</p>
 <iframe src="https://qutip.org" width="100%" height="500px"></iframe>
-<p>But I was looking for a more performant solution. <a href="https://github.com/qojulia/QuantumOptics.jl">QuantumOptics.jl</a> was my first choice, but its syntax was too different from QuTiP. So I decided to write my own package, also because I was curious to learn Julia deeply.</p>
+<p>However, I was lloking for a more efficient solution. I initially explored <a href="https://github.com/qojulia/QuantumOptics.jl">QuantumOptics.jl</a>, but its syntax differed significantly from QuTiP’s, which made the transition challenging. Motivated by the desire for both performance and familiarity, as well as a deep curiosity to learn Julia, I decided to develop my own package.</p>
 </section>
 <section id="a-demo-code-the-schrödinger-equation" class="level2">
 <h2 class="anchored" data-anchor-id="a-demo-code-the-schrödinger-equation">A Demo Code: the Schrödinger Equation</h2>
@@ -260,7 +265,7 @@ i \frac{d}{dt} \left| \psi(t) \right\rangle = \hat{H} \left| \psi(t) \right\rang
 \]</span></p>
 <p>and so</p>
 <p><span class="math display">\[
-\langle \hat{a} + \hat{a}^\dagger \rangle (t) = \sqrt{3} \cos (\omega_0 t) \, .
+\langle \hat{a} + \hat{a}^\dagger \rangle (t) = \sqrt{3} \cos (\omega_0 t) \, ,
 \]</span></p>
 <p>and we can compare the numerical results with it.</p>
 <section id="the-qutip-case" class="level3">
@@ -329,6 +334,101 @@ reltol = 1.0e-6</code></pre>
 </div>
 </div>
 </div>
+</section>
+</section>
+<section id="the-quantumobject-struct" class="level2">
+<h2 class="anchored" data-anchor-id="the-quantumobject-struct">The <code>QuantumObject</code> struct</h2>
+<p>If we take a look at the structure of the annihilation operator <span class="math inline">\(\hat{a}\)</span>, we can see that it is a <a href="https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.QuantumObject"><code>QuantumObject</code></a> Julia constructor.</p>
+<div id="6" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb6-1"><a href="#cb6-1"></a><span class="fu">typeof</span>(a)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>QuantumObject{SparseMatrixCSC{ComplexF64, Int64}, OperatorQuantumObject, 1}</code></pre>
+</div>
+</div>
+<div id="8" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb8-1"><a href="#cb8-1"></a>a</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>Quantum Object:   type=Operator   dims=[10]   size=(10, 10)   ishermitian=false
+10×10 SparseMatrixCSC{ComplexF64, Int64} with 9 stored entries:
+     ⋅      1.0+0.0im          ⋅      …          ⋅          ⋅    
+     ⋅          ⋅      1.41421+0.0im             ⋅          ⋅    
+     ⋅          ⋅              ⋅                 ⋅          ⋅    
+     ⋅          ⋅              ⋅                 ⋅          ⋅    
+     ⋅          ⋅              ⋅                 ⋅          ⋅    
+     ⋅          ⋅              ⋅      …          ⋅          ⋅    
+     ⋅          ⋅              ⋅                 ⋅          ⋅    
+     ⋅          ⋅              ⋅         2.82843+0.0im      ⋅    
+     ⋅          ⋅              ⋅                 ⋅      3.0+0.0im
+     ⋅          ⋅              ⋅                 ⋅          ⋅    </code></pre>
+</div>
+</div>
+<p>A <code>QuantumObject</code> struct is defined as follows</p>
+<div id="10" class="cell" data-execution_count="0">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb10-1"><a href="#cb10-1"></a><span class="kw">struct</span> QuantumObject{MT<span class="op">&lt;:</span><span class="dt">AbstractArray</span>,ObjType<span class="op">&lt;:</span><span class="dt">QuantumObjectType</span>,N} <span class="op">&lt;:</span><span class="dt"> AbstractQuantumObject{MT,ObjType,N}</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a>    data<span class="op">::</span><span class="dt">MT</span></span>
+<span id="cb10-3"><a href="#cb10-3"></a>    <span class="kw">type</span><span class="op">::</span><span class="dt">ObjType</span></span>
+<span id="cb10-4"><a href="#cb10-4"></a>    dims<span class="op">::</span><span class="dt">SVector{N,Int}</span></span>
+<span id="cb10-5"><a href="#cb10-5"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <code>data</code> field contains the actual data of the quantum object, in this case it is a sparse matrix. This follows from the definition of the matrix elements of the annihilation operator</p>
+<p><span class="math display">\[
+\langle n \vert \hat{a} \vert m \rangle = \sqrt{m} \ \delta_{n, m-1} \, ,
+\]</span></p>
+<p>where we defined <span class="math inline">\(N\)</span> as the cutoff for the Fock states. The <code>type</code> field gives the type of the quantum object</p>
+<ul>
+<li><code>Ket</code> for ket states</li>
+<li><code>Bra</code> for bra states</li>
+<li><code>Operator</code> for operators</li>
+<li><code>SuperOperator</code> for superoperators (e.g., Liouvillian)</li>
+<li><code>OperatorKet</code> for vectorized representation of operators, acting as a ket state</li>
+<li><code>OperatorBra</code> for vectorized representation of operators, acting as a bra state</li>
+</ul>
+<p>Finally, the <code>dims</code> field contains the list of dimensions of the Hilbert spaces. Its length is equal to the number of subsystems, and each element is the dimension of the corresponding subsystem.</p>
+</section>
+<section id="large-hilbert-space-dimensions-the-need-for-gpu-acceleration" class="level2">
+<h2 class="anchored" data-anchor-id="large-hilbert-space-dimensions-the-need-for-gpu-acceleration">Large Hilbert space dimensions: the need for GPU acceleration</h2>
+<p>The example above was quite simple, where an analytical solution was known. However, in many cases, the system is more complex and even the numerical solution can be challenging. For instance, the Hilbert space dimension can be very large when considering many subsystems. Let’s make a practical example by considering a 2-dimensional transferse field Ising model with 3x2 spins. The Hamiltonian is given by</p>
+<p>The total Hamiltonian is</p>
+<p><span class="math display">\[
+\hat{H} = \frac{J_z}{2} \sum_{\langle i,j \rangle} \hat{\sigma}_i^z \hat{\sigma}_j^z + h_x \sum_i \hat{\sigma}_i^x \, ,
+\]</span></p>
+<p>and, since we are including losses, the time evolution of the density matrix is governed by the Lindblad master equation</p>
+<p><span class="math display">\[
+\frac{d}{d t} \hat{\rho} = \mathcal{L}[\hat{\rho}] = -i[\hat{H}, \hat{\rho}] + \sum_k \left( \hat{L}_k \hat{\rho} \hat{L}_k^\dagger - \frac{1}{2} \{\hat{L}_k^\dagger \hat{L}_k, \hat{\rho}\} \right) \, ,
+\]</span></p>
+<p>with the dissipators</p>
+<p><span class="math display">\[
+\hat{L}_k = \sqrt{\gamma} \hat{\sigma}_k^- \, ,
+\]</span></p>
+<p>and <span class="math inline">\(\gamma\)</span> the decay rate.</p>
+<section id="the-vectorized-representation-of-the-density-matrix" class="level3">
+<h3 class="anchored" data-anchor-id="the-vectorized-representation-of-the-density-matrix">The vectorized representation of the density matrix</h3>
+<p>The Liouvillian <span class="math inline">\(\mathcal{L}\)</span> is a superoperator, meaning that it acts on operators. A convenient way to represent its action is by vectorizing the density matrix</p>
+<p><span class="math display">\[
+\hat{\rho} =
+\begin{pmatrix}
+\rho_{11} &amp; \rho_{12} &amp; \cdots &amp; \rho_{1N} \\
+\rho_{21} &amp; \rho_{22} &amp; \cdots &amp; \rho_{2N} \\
+\vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+\rho_{N1} &amp; \rho_{N2} &amp; \cdots &amp; \rho_{NN}
+\end{pmatrix}
+\rightarrow
+\begin{pmatrix}
+\rho_{11} \\
+\rho_{21} \\
+\vdots \\
+\rho_{N1} \\
+\rho_{12} \\
+\rho_{22} \\
+\vdots \\
+\rho_{N2} \\
+\vdots \\
+\rho_{1N} \\
+\rho_{2N} \\
+\vdots \\
+\rho_{NN}
+\end{pmatrix} \, .
+\]</span></p>
 
 
 </section>
