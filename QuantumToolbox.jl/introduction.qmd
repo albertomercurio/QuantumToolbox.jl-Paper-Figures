@@ -16,7 +16,7 @@ julia:
 <iframe src="https://qutip.org" width="100%" height="500px"></iframe>
 ```
 
-However, I was lloking for a more efficient solution. I initially explored [QuantumOptics.jl](https://github.com/qojulia/QuantumOptics.jl), but its syntax differed significantly from QuTiP’s, which made the transition challenging. Motivated by the desire for both performance and familiarity, as well as a deep curiosity to learn Julia, I decided to develop my own package.
+However, I was looking for a more efficient solution. I initially explored [QuantumOptics.jl](https://github.com/qojulia/QuantumOptics.jl), but its syntax differed significantly from QuTiP’s, which made the transition challenging. Motivated by the desire for both performance and familiarity, as well as a deep curiosity to learn Julia, I decided to develop my own package.
 
 ## A Demo Code: the Schrödinger Equation
 
@@ -152,7 +152,7 @@ where we defined $N$ as the cutoff for the Fock states. The `type` field gives t
 
 Finally, the `dims` field contains the list of dimensions of the Hilbert spaces. Its length is equal to the number of subsystems, and each element is the dimension of the corresponding subsystem.
 
-## Large Hilbert space dimensions: the need for GPU acceleration
+## Large Hilbert Spaces: The Need for GPU Acceleration
 
 The example above was quite simple, where an analytical solution was known. However, in many cases, the system is more complex and even the numerical solution can be challenging. For instance, the Hilbert space dimension can be very large when considering many subsystems. Let's make a practical example by considering a 2-dimensional transverse field Ising model with 3x2 spins. The Hamiltonian is given by
 
