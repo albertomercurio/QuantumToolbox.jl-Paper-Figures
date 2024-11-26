@@ -199,12 +199,15 @@ window.Quarto = {
   <li><a href="#quantumtoolbox.jl-almost-the-same-syntax" id="toc-quantumtoolbox.jl-almost-the-same-syntax" class="nav-link" data-scroll-target="#quantumtoolbox.jl-almost-the-same-syntax">QuantumToolbox.jl: Almost the same syntax</a></li>
   </ul></li>
   <li><a href="#the-quantumobject-struct" id="toc-the-quantumobject-struct" class="nav-link" data-scroll-target="#the-quantumobject-struct">The <code>QuantumObject</code> struct</a></li>
-  <li><a href="#large-hilbert-space-dimensions-the-need-for-gpu-acceleration" id="toc-large-hilbert-space-dimensions-the-need-for-gpu-acceleration" class="nav-link" data-scroll-target="#large-hilbert-space-dimensions-the-need-for-gpu-acceleration">Large Hilbert space dimensions: the need for GPU acceleration</a>
+  <li><a href="#large-hilbert-spaces-the-need-for-gpu-acceleration" id="toc-large-hilbert-spaces-the-need-for-gpu-acceleration" class="nav-link" data-scroll-target="#large-hilbert-spaces-the-need-for-gpu-acceleration">Large Hilbert Spaces: The Need for GPU Acceleration</a>
   <ul class="collapse">
   <li><a href="#the-vectorized-representation-of-the-density-matrix" id="toc-the-vectorized-representation-of-the-density-matrix" class="nav-link" data-scroll-target="#the-vectorized-representation-of-the-density-matrix">The vectorized representation of the density matrix</a></li>
+  <li><a href="#simulation-of-the-master-equation-on-the-cpu" id="toc-simulation-of-the-master-equation-on-the-cpu" class="nav-link" data-scroll-target="#simulation-of-the-master-equation-on-the-cpu">Simulation of the master equation on the CPU</a></li>
+  <li><a href="#simulation-of-the-master-equation-on-the-gpu" id="toc-simulation-of-the-master-equation-on-the-gpu" class="nav-link" data-scroll-target="#simulation-of-the-master-equation-on-the-gpu">Simulation of the master equation on the GPU</a></li>
   </ul></li>
+  <li><a href="#system-information" id="toc-system-information" class="nav-link" data-scroll-target="#system-information">System Information</a></li>
   </ul>
-</nav>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="introduction.md"><i class="bi bi-file-code"></i>Github (GFM)</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -237,9 +240,9 @@ window.Quarto = {
 
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
-<p><a href="https://github.com/qutip/QuantumToolbox.jl">QuantumToolbox.jl</a> was born during my Ph.D., driven by the need for a high-performance framework for quantum simulations. At the time, I was already using <a href="https://github.com/qutip/qutip">QuTiP</a> (Quantum Toolbox in Python)</p>
+<p><a href="https://github.com/qutip/QuantumToolbox.jl">QuantumToolbox.jl</a> was born during my Ph.D., driven by the need for a high-performance framework for quantum simulations. At the time, I was already using <a href="https://github.com/qutip/qutip">QuTiP</a> (Quantum Toolbox in Python).</p>
 <iframe src="https://qutip.org" width="100%" height="500px"></iframe>
-<p>However, I was lloking for a more efficient solution. I initially explored <a href="https://github.com/qojulia/QuantumOptics.jl">QuantumOptics.jl</a>, but its syntax differed significantly from QuTiP’s, which made the transition challenging. Motivated by the desire for both performance and familiarity, as well as a deep curiosity to learn Julia, I decided to develop my own package.</p>
+<p>However, I was looking for a more efficient solution. I initially explored <a href="https://github.com/qojulia/QuantumOptics.jl">QuantumOptics.jl</a>, but its syntax differed significantly from QuTiP’s, which made the transition challenging. Motivated by the desire for both performance and familiarity, as well as a deep curiosity to learn Julia, I decided to develop my own package.</p>
 </section>
 <section id="a-demo-code-the-schrödinger-equation" class="level2">
 <h2 class="anchored" data-anchor-id="a-demo-code-the-schrödinger-equation">A Demo Code: the Schrödinger Equation</h2>
@@ -385,25 +388,72 @@ reltol = 1.0e-6</code></pre>
 </ul>
 <p>Finally, the <code>dims</code> field contains the list of dimensions of the Hilbert spaces. Its length is equal to the number of subsystems, and each element is the dimension of the corresponding subsystem.</p>
 </section>
-<section id="large-hilbert-space-dimensions-the-need-for-gpu-acceleration" class="level2">
-<h2 class="anchored" data-anchor-id="large-hilbert-space-dimensions-the-need-for-gpu-acceleration">Large Hilbert space dimensions: the need for GPU acceleration</h2>
-<p>The example above was quite simple, where an analytical solution was known. However, in many cases, the system is more complex and even the numerical solution can be challenging. For instance, the Hilbert space dimension can be very large when considering many subsystems. Let’s make a practical example by considering a 2-dimensional transferse field Ising model with 3x2 spins. The Hamiltonian is given by</p>
-<p>The total Hamiltonian is</p>
-<p><span class="math display">\[
+<section id="large-hilbert-spaces-the-need-for-gpu-acceleration" class="level2">
+<h2 class="anchored" data-anchor-id="large-hilbert-spaces-the-need-for-gpu-acceleration">Large Hilbert Spaces: The Need for GPU Acceleration</h2>
+<p>The example above was quite simple, where an analytical solution was known. However, in many cases, the system is more complex and even the numerical solution can be challenging. For instance, the Hilbert space dimension can be very large when considering many subsystems. Let’s make a practical example by considering a transverse field Ising model with 10 spins. The Hamiltonian is given by</p>
+<p><span id="eq-transverse-field-ising"><span class="math display">\[
 \hat{H} = \frac{J_z}{2} \sum_{\langle i,j \rangle} \hat{\sigma}_i^z \hat{\sigma}_j^z + h_x \sum_i \hat{\sigma}_i^x \, ,
-\]</span></p>
-<p>and, since we are including losses, the time evolution of the density matrix is governed by the Lindblad master equation</p>
-<p><span class="math display">\[
+\tag{1}\]</span></span></p>
+<p>where <span class="math inline">\(\hat{\sigma}_i^z\)</span> and <span class="math inline">\(\hat{\sigma}_i^x\)</span> are the Pauli matrices acting on the <span class="math inline">\(i\)</span>-th spin and, since we are including losses, the time evolution of the density matrix is governed by the Lindblad master equation</p>
+<p><span id="eq-master-equation"><span class="math display">\[
 \frac{d}{d t} \hat{\rho} = \mathcal{L}[\hat{\rho}] = -i[\hat{H}, \hat{\rho}] + \sum_k \left( \hat{L}_k \hat{\rho} \hat{L}_k^\dagger - \frac{1}{2} \{\hat{L}_k^\dagger \hat{L}_k, \hat{\rho}\} \right) \, ,
-\]</span></p>
+\tag{2}\]</span></span></p>
 <p>with the dissipators</p>
-<p><span class="math display">\[
+<p><span id="eq-transverse-field-ising-dissipators"><span class="math display">\[
 \hat{L}_k = \sqrt{\gamma} \hat{\sigma}_k^- \, ,
-\]</span></p>
-<p>and <span class="math inline">\(\gamma\)</span> the decay rate.</p>
+\tag{3}\]</span></span></p>
+<p>where <span class="math inline">\(\hat{\sigma}_k^-\)</span> is the lowering operator acting on the <span class="math inline">\(k\)</span>-th spin, and <span class="math inline">\(\gamma\)</span> the decay rate.</p>
+<div id="12" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb11-1"><a href="#cb11-1"></a>N <span class="op">=</span> <span class="fl">10</span> <span class="co"># Total number of spins</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a>Jz <span class="op">=</span> <span class="fl">1.0</span></span>
+<span id="cb11-3"><a href="#cb11-3"></a>hx <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb11-4"><a href="#cb11-4"></a>γ <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb11-5"><a href="#cb11-5"></a></span>
+<span id="cb11-6"><a href="#cb11-6"></a>σx <span class="op">=</span> <span class="fu">sigmax</span>()</span>
+<span id="cb11-7"><a href="#cb11-7"></a>σz <span class="op">=</span> <span class="fu">sigmaz</span>()</span>
+<span id="cb11-8"><a href="#cb11-8"></a>σm <span class="op">=</span> <span class="fu">sigmam</span>()</span>
+<span id="cb11-9"><a href="#cb11-9"></a></span>
+<span id="cb11-10"><a href="#cb11-10"></a><span class="co"># Efficient way to generate the operator on the i-th spin</span></span>
+<span id="cb11-11"><a href="#cb11-11"></a><span class="kw">function</span> <span class="fu">op_i</span>(op, i, <span class="op">::</span><span class="dt">Val{N}</span>) <span class="kw">where</span> N</span>
+<span id="cb11-12"><a href="#cb11-12"></a>    data <span class="op">=</span> <span class="fu">kron</span>(<span class="fu">qeye</span>(<span class="fl">2</span><span class="op">^</span>(i<span class="op">-</span><span class="fl">1</span>)).data, op.data, <span class="fu">qeye</span>(<span class="fl">2</span><span class="op">^</span>(N<span class="op">-</span>i)).data)</span>
+<span id="cb11-13"><a href="#cb11-13"></a>    <span class="kw">type</span> <span class="op">=</span> Operator</span>
+<span id="cb11-14"><a href="#cb11-14"></a>    dims <span class="op">=</span> <span class="fu">ntuple</span>(x <span class="op">-&gt;</span> <span class="fl">2</span>, <span class="fu">Val</span>(N))</span>
+<span id="cb11-15"><a href="#cb11-15"></a></span>
+<span id="cb11-16"><a href="#cb11-16"></a>    <span class="cf">return</span> <span class="fu">Qobj</span>(data, <span class="kw">type</span> <span class="op">=</span> <span class="kw">type</span>, dims <span class="op">=</span> dims)</span>
+<span id="cb11-17"><a href="#cb11-17"></a><span class="kw">end</span></span>
+<span id="cb11-18"><a href="#cb11-18"></a></span>
+<span id="cb11-19"><a href="#cb11-19"></a>H <span class="op">=</span> Jz <span class="op">/</span> <span class="fl">2</span> <span class="op">*</span> <span class="fu">mapreduce</span>(i <span class="op">-&gt;</span> <span class="fu">op_i</span>(σz, i, <span class="fu">Val</span>(N)) <span class="op">*</span> <span class="fu">op_i</span>(σz, i <span class="op">+</span> <span class="fl">1</span>, <span class="fu">Val</span>(N)), <span class="op">+</span>, <span class="fl">1</span><span class="op">:</span>N<span class="op">-</span><span class="fl">1</span>) <span class="op">+</span> hx <span class="op">*</span> <span class="fu">mapreduce</span>(i <span class="op">-&gt;</span> <span class="fu">op_i</span>(σx, i, <span class="fu">Val</span>(N)), <span class="op">+</span>, <span class="fl">1</span><span class="op">:</span>N)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>Quantum Object:   type=Operator   dims=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2]   size=(1024, 1024)   ishermitian=true
+1024×1024 SparseMatrixCSC{ComplexF64, Int64} with 11264 stored entries:
+⎡⣿⣿⣾⢦⡀⠳⣄⠀⠀⠀⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
+⎢⠺⣟⢻⣶⣿⡂⠈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⢤⡈⠻⠻⠿⣧⣤⣠⡈⠳⠄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠙⢦⡀⠀⣻⣿⣿⣙⣦⡀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠙⢦⡈⠳⣼⣿⣿⡆⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠙⢦⡀⠀⠀⠁⠀⠈⠈⠉⣿⣿⣾⢦⡀⠳⣄⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠺⣟⢻⣶⣿⡂⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⢤⡈⠻⠻⠿⣧⣤⣠⡈⠳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡀⠀⣻⣿⣿⣙⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡈⠳⣼⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⎥
+⎢⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⡟⢦⡈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣍⣿⣿⣯⠀⠈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢦⡈⠋⠛⢻⣶⣦⣦⡈⠓⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠨⣿⠿⣧⣽⡦⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠙⢦⠈⠳⡿⣿⣿⣀⡀⡀⠀⢀⠀⠀⠈⠳⣄⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠸⣿⣿⡟⢦⡈⠳⣄⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠈⠻⣍⣿⣿⣯⠀⠈⠳⣄⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠐⢦⡈⠋⠛⢻⣶⣦⣦⡈⠓⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡀⠨⣿⠿⣧⣽⡦⎥
+⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠙⢦⠈⠳⡿⣿⣿⎦</code></pre>
+</div>
+</div>
+<div id="14" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb13-1"><a href="#cb13-1"></a>c_ops <span class="op">=</span> <span class="fu">mapreduce</span>(i <span class="op">-&gt;</span> <span class="fu">sqrt</span>(γ) <span class="op">*</span> <span class="fu">op_i</span>(σm, i, <span class="fu">Val</span>(N)), vcat, <span class="fl">1</span><span class="op">:</span>N);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 <section id="the-vectorized-representation-of-the-density-matrix" class="level3">
 <h3 class="anchored" data-anchor-id="the-vectorized-representation-of-the-density-matrix">The vectorized representation of the density matrix</h3>
-<p>The Liouvillian <span class="math inline">\(\mathcal{L}\)</span> is a superoperator, meaning that it acts on operators. A convenient way to represent its action is by vectorizing the density matrix</p>
+<p>The Liouvillian <span class="math inline">\(\mathcal{L}\)</span> is a superoperator, meaning that it acts on operators. A convenient way to represent its action on <span class="math inline">\(\hat{\rho}\)</span> is by vectorizing the density matrix</p>
 <p><span class="math display">\[
 \hat{\rho} =
 \begin{pmatrix}
@@ -429,9 +479,144 @@ reltol = 1.0e-6</code></pre>
 \rho_{NN}
 \end{pmatrix} \, .
 \]</span></p>
-
-
+<p>In this framework, the Liouvillian is represented by a matrix, and it is generally used when solving the master equation in <a href="#eq-master-equation" class="quarto-xref">Equation&nbsp;2</a>.</p>
+<div id="16" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb14-1"><a href="#cb14-1"></a>L <span class="op">=</span> <span class="fu">liouvillian</span>(H, c_ops)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>Quantum Object:   type=SuperOperator   dims=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2]   size=(1048576, 1048576)
+1048576×1048576 SparseMatrixCSC{ComplexF64, Int64} with 24641535 stored entries:
+⎡⣿⣿⣾⢦⡀⠳⣄⠀⠀⠀⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
+⎢⠺⣟⢻⣶⣿⡂⠈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⢤⡈⠻⠻⠿⣧⣤⣠⡈⠳⠄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠙⢦⡀⠀⣻⣿⣿⣙⣦⡀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠙⢦⡈⠳⣼⣿⣿⡆⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠙⢦⡀⠀⠀⠁⠀⠈⠈⠉⣿⣿⣾⢦⡀⠳⣄⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠺⣟⢻⣶⣿⡂⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⢤⡈⠻⠻⠿⣧⣤⣠⡈⠳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡀⠀⣻⣿⣿⣙⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡈⠳⣼⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⎥
+⎢⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⡟⢦⡈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣍⣿⣿⣯⠀⠈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢦⡈⠋⠛⢻⣶⣦⣦⡈⠓⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠨⣿⠿⣧⣽⡦⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠙⢦⠈⠳⡿⣿⣿⣀⡀⡀⠀⢀⠀⠀⠈⠳⣄⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠸⣿⣿⡟⢦⡈⠳⣄⠀⠀⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠈⠻⣍⣿⣿⣯⠀⠈⠳⣄⠀⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠐⢦⡈⠋⠛⢻⣶⣦⣦⡈⠓⎥
+⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡀⠨⣿⠿⣧⣽⡦⎥
+⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠙⢦⠈⠳⡿⣿⣿⎦</code></pre>
+</div>
+</div>
 </section>
+<section id="simulation-of-the-master-equation-on-the-cpu" class="level3">
+<h3 class="anchored" data-anchor-id="simulation-of-the-master-equation-on-the-cpu">Simulation of the master equation on the CPU</h3>
+<p>Let’s simulate the dynamics of the system.</p>
+<div id="18" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb16-1"><a href="#cb16-1"></a>ψ<span class="fl">0</span> <span class="op">=</span> <span class="fu">mapreduce</span>(i <span class="op">-&gt;</span> i <span class="op">==</span> <span class="fl">1</span> ? <span class="fu">basis</span>(<span class="fl">2</span>, <span class="fl">1</span>) <span class="op">:</span> <span class="fu">basis</span>(<span class="fl">2</span>, <span class="fl">0</span>), tensor, <span class="fl">1</span><span class="op">:</span>N)</span>
+<span id="cb16-2"><a href="#cb16-2"></a></span>
+<span id="cb16-3"><a href="#cb16-3"></a>tlist <span class="op">=</span> <span class="fu">range</span>(<span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">100</span>)</span>
+<span id="cb16-4"><a href="#cb16-4"></a></span>
+<span id="cb16-5"><a href="#cb16-5"></a>e_ops <span class="op">=</span> [<span class="fu">mapreduce</span>(i <span class="op">-&gt;</span> <span class="fu">op_i</span>(σz, i, <span class="fu">Val</span>(N)), <span class="op">+</span>, <span class="fl">1</span><span class="op">:</span>N)]</span>
+<span id="cb16-6"><a href="#cb16-6"></a></span>
+<span id="cb16-7"><a href="#cb16-7"></a>result <span class="op">=</span> <span class="fu">mesolve</span>(H, ψ<span class="fl">0</span>, tlist, c_ops, e_ops<span class="op">=</span>e_ops)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Progress: [                              ]   2.0% --- Elapsed Time: 0h 00m 01s (ETA: 0h 00m 49s)Progress: [=                             ]   4.0% --- Elapsed Time: 0h 00m 02s (ETA: 0h 00m 48s)Progress: [=                             ]   6.0% --- Elapsed Time: 0h 00m 04s (ETA: 0h 01m 02s)Progress: [==                            ]   8.0% --- Elapsed Time: 0h 00m 05s (ETA: 0h 00m 57s)Progress: [===                           ]  10.0% --- Elapsed Time: 0h 00m 06s (ETA: 0h 00m 54s)Progress: [===                           ]  12.0% --- Elapsed Time: 0h 00m 08s (ETA: 0h 00m 58s)Progress: [====                          ]  14.0% --- Elapsed Time: 0h 00m 09s (ETA: 0h 00m 55s)Progress: [====                          ]  16.0% --- Elapsed Time: 0h 00m 10s (ETA: 0h 00m 52s)Progress: [=====                         ]  18.0% --- Elapsed Time: 0h 00m 12s (ETA: 0h 00m 54s)Progress: [======                        ]  20.0% --- Elapsed Time: 0h 00m 13s (ETA: 0h 00m 52s)Progress: [======                        ]  22.0% --- Elapsed Time: 0h 00m 14s (ETA: 0h 00m 49s)Progress: [=======                       ]  24.0% --- Elapsed Time: 0h 00m 16s (ETA: 0h 00m 50s)Progress: [=======                       ]  26.0% --- Elapsed Time: 0h 00m 17s (ETA: 0h 00m 48s)Progress: [========                      ]  28.0% --- Elapsed Time: 0h 00m 18s (ETA: 0h 00m 46s)Progress: [=========                     ]  30.0% --- Elapsed Time: 0h 00m 20s (ETA: 0h 00m 46s)Progress: [=========                     ]  32.0% --- Elapsed Time: 0h 00m 21s (ETA: 0h 00m 44s)Progress: [==========                    ]  34.0% --- Elapsed Time: 0h 00m 22s (ETA: 0h 00m 42s)Progress: [==========                    ]  36.0% --- Elapsed Time: 0h 00m 24s (ETA: 0h 00m 42s)Progress: [===========                   ]  38.0% --- Elapsed Time: 0h 00m 25s (ETA: 0h 00m 40s)Progress: [============                  ]  40.0% --- Elapsed Time: 0h 00m 26s (ETA: 0h 00m 39s)Progress: [============                  ]  42.0% --- Elapsed Time: 0h 00m 28s (ETA: 0h 00m 38s)Progress: [=============                 ]  44.0% --- Elapsed Time: 0h 00m 29s (ETA: 0h 00m 36s)Progress: [=============                 ]  46.0% --- Elapsed Time: 0h 00m 30s (ETA: 0h 00m 35s)Progress: [==============                ]  48.0% --- Elapsed Time: 0h 00m 32s (ETA: 0h 00m 34s)Progress: [===============               ]  50.0% --- Elapsed Time: 0h 00m 33s (ETA: 0h 00m 33s)Progress: [===============               ]  52.0% --- Elapsed Time: 0h 00m 34s (ETA: 0h 00m 31s)Progress: [================              ]  54.0% --- Elapsed Time: 0h 00m 36s (ETA: 0h 00m 30s)Progress: [================              ]  56.0% --- Elapsed Time: 0h 00m 37s (ETA: 0h 00m 29s)Progress: [=================             ]  58.0% --- Elapsed Time: 0h 00m 38s (ETA: 0h 00m 27s)Progress: [==================            ]  60.0% --- Elapsed Time: 0h 00m 40s (ETA: 0h 00m 26s)Progress: [==================            ]  62.0% --- Elapsed Time: 0h 00m 41s (ETA: 0h 00m 25s)Progress: [===================           ]  64.0% --- Elapsed Time: 0h 00m 43s (ETA: 0h 00m 24s)Progress: [====================          ]  67.0% --- Elapsed Time: 0h 00m 44s (ETA: 0h 00m 21s)Progress: [=====================         ]  70.0% --- Elapsed Time: 0h 00m 45s (ETA: 0h 00m 19s)Progress: [=====================         ]  73.0% --- Elapsed Time: 0h 00m 47s (ETA: 0h 00m 17s)Progress: [======================        ]  76.0% --- Elapsed Time: 0h 00m 48s (ETA: 0h 00m 15s)Progress: [=======================       ]  79.0% --- Elapsed Time: 0h 00m 49s (ETA: 0h 00m 13s)Progress: [========================      ]  82.0% --- Elapsed Time: 0h 00m 51s (ETA: 0h 00m 11s)Progress: [=========================     ]  85.0% --- Elapsed Time: 0h 00m 52s (ETA: 0h 00m 09s)Progress: [==========================    ]  88.0% --- Elapsed Time: 0h 00m 53s (ETA: 0h 00m 07s)Progress: [===========================   ]  91.0% --- Elapsed Time: 0h 00m 55s (ETA: 0h 00m 05s)Progress: [============================  ]  94.0% --- Elapsed Time: 0h 00m 56s (ETA: 0h 00m 03s)Progress: [============================= ]  97.0% --- Elapsed Time: 0h 00m 57s (ETA: 0h 00m 01s)Progress: [==============================] 100.0% --- Elapsed Time: 0h 00m 59s (ETA: 0h 00m 00s)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>Solution of time evolution
+(return code: Success)
+--------------------------
+num_states = 1
+num_expect = 1
+ODE alg.: OrdinaryDiffEqTsit5.Tsit5{typeof(OrdinaryDiffEqCore.trivial_limiter!), typeof(OrdinaryDiffEqCore.trivial_limiter!), Static.False}(OrdinaryDiffEqCore.trivial_limiter!, OrdinaryDiffEqCore.trivial_limiter!, static(false))
+abstol = 1.0e-8
+reltol = 1.0e-6</code></pre>
+</div>
+</div>
+<p>We observe that the simulation runs quite slowly. In the next section, we will leverage GPU acceleration using <a href="https://github.com/JuliaGPU/CUDA.jl">CUDA.jl</a>, which is seamlessly integrated into QuantumToolbox.jl.</p>
+</section>
+<section id="simulation-of-the-master-equation-on-the-gpu" class="level3">
+<h3 class="anchored" data-anchor-id="simulation-of-the-master-equation-on-the-gpu">Simulation of the master equation on the GPU</h3>
+<p>To run on the GPU using CUDA.jl, we only need to convert the <code>QuantumObject</code>s using the <code>cu</code> function.</p>
+<div id="20" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb19-1"><a href="#cb19-1"></a><span class="im">using</span> <span class="bu">CUDA</span></span>
+<span id="cb19-2"><a href="#cb19-2"></a>CUDA.<span class="fu">allowscalar</span>(<span class="cn">false</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="22" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb20-1"><a href="#cb20-1"></a>H_gpu <span class="op">=</span> <span class="fu">cu</span>(H)</span>
+<span id="cb20-2"><a href="#cb20-2"></a>c_ops_gpu <span class="op">=</span> <span class="fu">cu</span>.(c_ops)</span>
+<span id="cb20-3"><a href="#cb20-3"></a>ψ<span class="fl">0</span>_gpu <span class="op">=</span> <span class="fu">cu</span>(ψ<span class="fl">0</span>)</span>
+<span id="cb20-4"><a href="#cb20-4"></a></span>
+<span id="cb20-5"><a href="#cb20-5"></a>e_ops_gpu <span class="op">=</span> <span class="fu">cu</span>.(e_ops)</span>
+<span id="cb20-6"><a href="#cb20-6"></a></span>
+<span id="cb20-7"><a href="#cb20-7"></a><span class="fu">mesolve</span>(H_gpu, ψ<span class="fl">0</span>_gpu, tlist, c_ops_gpu, e_ops<span class="op">=</span>e_ops_gpu, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>)) <span class="co"># warm-up</span></span>
+<span id="cb20-8"><a href="#cb20-8"></a></span>
+<span id="cb20-9"><a href="#cb20-9"></a>result_gpu <span class="op">=</span> <span class="fu">mesolve</span>(H_gpu, ψ<span class="fl">0</span>_gpu, tlist, c_ops_gpu, e_ops<span class="op">=</span>e_ops_gpu)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Progress: [======                        ]  20.0% --- Elapsed Time: 0h 00m 01s (ETA: 0h 00m 04s)Progress: [==========================    ]  88.0% --- Elapsed Time: 0h 00m 02s (ETA: 0h 00m 00s)Progress: [==============================] 100.0% --- Elapsed Time: 0h 00m 02s (ETA: 0h 00m 00s)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<pre><code>Solution of time evolution
+(return code: Success)
+--------------------------
+num_states = 1
+num_expect = 1
+ODE alg.: OrdinaryDiffEqTsit5.Tsit5{typeof(OrdinaryDiffEqCore.trivial_limiter!), typeof(OrdinaryDiffEqCore.trivial_limiter!), Static.False}(OrdinaryDiffEqCore.trivial_limiter!, OrdinaryDiffEqCore.trivial_limiter!, static(false))
+abstol = 1.0e-8
+reltol = 1.0e-6</code></pre>
+</div>
+</div>
+<p>And we can plot the results of both CPU and GPU simulations.</p>
+<div id="24" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb23-1"><a href="#cb23-1"></a>fig <span class="op">=</span> <span class="fu">Figure</span>(size<span class="op">=</span>(<span class="fl">700</span>, <span class="fl">300</span>), fontsize<span class="op">=</span><span class="fl">15</span>)</span>
+<span id="cb23-2"><a href="#cb23-2"></a>ax <span class="op">=</span> <span class="fu">Axis</span>(fig[<span class="fl">1</span>, <span class="fl">1</span>], xlabel<span class="op">=</span><span class="st">"Time"</span>, ylabel<span class="op">=</span>L<span class="st">"\langle \hat{\sigma}_z </span><span class="sc">\r</span><span class="st">angle"</span>)</span>
+<span id="cb23-3"><a href="#cb23-3"></a></span>
+<span id="cb23-4"><a href="#cb23-4"></a><span class="fu">lines!</span>(ax, result.times, <span class="fu">real</span>.(result.expect[<span class="fl">1</span>,<span class="op">:</span>]), linewidth<span class="op">=</span><span class="fl">3</span>, label<span class="op">=</span><span class="st">"CPU"</span>)</span>
+<span id="cb23-5"><a href="#cb23-5"></a><span class="fu">lines!</span>(ax, result_gpu.times, <span class="fu">real</span>.(result_gpu.expect[<span class="fl">1</span>,<span class="op">:</span>]), linewidth<span class="op">=</span><span class="fl">3</span>, label<span class="op">=</span><span class="st">"GPU"</span>, linestyle<span class="op">=:</span>dash)</span>
+<span id="cb23-6"><a href="#cb23-6"></a></span>
+<span id="cb23-7"><a href="#cb23-7"></a><span class="fu">axislegend</span>(ax)</span>
+<span id="cb23-8"><a href="#cb23-8"></a></span>
+<span id="cb23-9"><a href="#cb23-9"></a><span class="fu">xlims!</span>(ax, result.times[<span class="fl">1</span>], result.times[<span class="kw">end</span>])</span>
+<span id="cb23-10"><a href="#cb23-10"></a></span>
+<span id="cb23-11"><a href="#cb23-11"></a>fig</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<div>
+<figure class="figure">
+<p><img src="introduction_files/figure-html/cell-13-output-1.svg" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<hr>
+</section>
+</section>
+<section id="system-information" class="level2">
+<h2 class="anchored" data-anchor-id="system-information">System Information</h2>
+<div id="26" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb24-1"><a href="#cb24-1"></a><span class="im">using</span> <span class="bu">InteractiveUtils</span></span>
+<span id="cb24-2"><a href="#cb24-2"></a></span>
+<span id="cb24-3"><a href="#cb24-3"></a><span class="fu">versioninfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Julia Version 1.11.1
+Commit 8f5b7ca12ad (2024-10-16 10:53 UTC)
+Build Info:
+  Official https://julialang.org/ release
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 32 × 13th Gen Intel(R) Core(TM) i9-13900KF
+  WORD_SIZE: 64
+  LLVM: libLLVM-16.0.6 (ORCJIT, alderlake)
+Threads: 16 default, 0 interactive, 8 GC (on 32 virtual cores)
+Environment:
+  JULIA_PYTHONCALL_EXE = ../pyenv/bin/python
+  LD_LIBRARY_PATH = /usr/local/lib:
+  JULIA_NUM_THREADS = 16
+  JULIA_CONDAPKG_BACKEND = Null
+  JULIA_LOAD_PATH = @:@stdlib</code></pre>
+</div>
+</div>
+
+
 </section>
 
 </main> <!-- /main -->

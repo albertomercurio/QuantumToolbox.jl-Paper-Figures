@@ -6,11 +6,11 @@ Alberto Mercurio
 [QuantumToolbox.jl](https://github.com/qutip/QuantumToolbox.jl) was born
 during my Ph.D., driven by the need for a high-performance framework for
 quantum simulations. At the time, I was already using
-[QuTiP](https://github.com/qutip/qutip) (Quantum Toolbox in Python)
+[QuTiP](https://github.com/qutip/qutip) (Quantum Toolbox in Python).
 
 <iframe src="https://qutip.org" width="100%" height="500px"></iframe>
 
-However, I was lloking for a more efficient solution. I initially
+However, I was looking for a more efficient solution. I initially
 explored
 [QuantumOptics.jl](https://github.com/qojulia/QuantumOptics.jl), but its
 syntax differed significantly from QuTiP’s, which made the transition
@@ -190,41 +190,91 @@ Finally, the `dims` field contains the list of dimensions of the Hilbert
 spaces. Its length is equal to the number of subsystems, and each
 element is the dimension of the corresponding subsystem.
 
-## Large Hilbert space dimensions: the need for GPU acceleration
+## Large Hilbert Spaces: The Need for GPU Acceleration
 
 The example above was quite simple, where an analytical solution was
 known. However, in many cases, the system is more complex and even the
 numerical solution can be challenging. For instance, the Hilbert space
 dimension can be very large when considering many subsystems. Let’s make
-a practical example by considering a 2-dimensional transferse field
-Ising model with 3x2 spins. The Hamiltonian is given by
+a practical example by considering a transverse field Ising model with
+10 spins. The Hamiltonian is given by
 
-The total Hamiltonian is
-
-$$
+<span id="eq-transverse-field-ising">$$
 \hat{H} = \frac{J_z}{2} \sum_{\langle i,j \rangle} \hat{\sigma}_i^z \hat{\sigma}_j^z + h_x \sum_i \hat{\sigma}_i^x \, ,
-$$
+ \qquad(1)$$</span>
 
-and, since we are including losses, the time evolution of the density
-matrix is governed by the Lindblad master equation
+where $\hat{\sigma}_i^z$ and $\hat{\sigma}_i^x$ are the Pauli matrices
+acting on the $i$-th spin and, since we are including losses, the time
+evolution of the density matrix is governed by the Lindblad master
+equation
 
-$$
+<span id="eq-master-equation">$$
 \frac{d}{d t} \hat{\rho} = \mathcal{L}[\hat{\rho}] = -i[\hat{H}, \hat{\rho}] + \sum_k \left( \hat{L}_k \hat{\rho} \hat{L}_k^\dagger - \frac{1}{2} \{\hat{L}_k^\dagger \hat{L}_k, \hat{\rho}\} \right) \, ,
-$$
+ \qquad(2)$$</span>
 
 with the dissipators
 
-$$
+<span id="eq-transverse-field-ising-dissipators">$$
 \hat{L}_k = \sqrt{\gamma} \hat{\sigma}_k^- \, ,
-$$
+ \qquad(3)$$</span>
 
-and $\gamma$ the decay rate.
+where $\hat{\sigma}_k^-$ is the lowering operator acting on the $k$-th
+spin, and $\gamma$ the decay rate.
+
+``` julia
+N = 10 # Total number of spins
+Jz = 1.0
+hx = 0.5
+γ = 0.1
+
+σx = sigmax()
+σz = sigmaz()
+σm = sigmam()
+
+# Efficient way to generate the operator on the i-th spin
+function op_i(op, i, ::Val{N}) where N
+    data = kron(qeye(2^(i-1)).data, op.data, qeye(2^(N-i)).data)
+    type = Operator
+    dims = ntuple(x -> 2, Val(N))
+
+    return Qobj(data, type = type, dims = dims)
+end
+
+H = Jz / 2 * mapreduce(i -> op_i(σz, i, Val(N)) * op_i(σz, i + 1, Val(N)), +, 1:N-1) + hx * mapreduce(i -> op_i(σx, i, Val(N)), +, 1:N)
+```
+
+    Quantum Object:   type=Operator   dims=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2]   size=(1024, 1024)   ishermitian=true
+    1024×1024 SparseMatrixCSC{ComplexF64, Int64} with 11264 stored entries:
+    ⎡⣿⣿⣾⢦⡀⠳⣄⠀⠀⠀⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
+    ⎢⠺⣟⢻⣶⣿⡂⠈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⢤⡈⠻⠻⠿⣧⣤⣠⡈⠳⠄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠙⢦⡀⠀⣻⣿⣿⣙⣦⡀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠙⢦⡈⠳⣼⣿⣿⡆⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠙⢦⡀⠀⠀⠁⠀⠈⠈⠉⣿⣿⣾⢦⡀⠳⣄⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠺⣟⢻⣶⣿⡂⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⢤⡈⠻⠻⠿⣧⣤⣠⡈⠳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡀⠀⣻⣿⣿⣙⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡈⠳⣼⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⎥
+    ⎢⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⡟⢦⡈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣍⣿⣿⣯⠀⠈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢦⡈⠋⠛⢻⣶⣦⣦⡈⠓⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠨⣿⠿⣧⣽⡦⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠙⢦⠈⠳⡿⣿⣿⣀⡀⡀⠀⢀⠀⠀⠈⠳⣄⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠸⣿⣿⡟⢦⡈⠳⣄⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠈⠻⣍⣿⣿⣯⠀⠈⠳⣄⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠐⢦⡈⠋⠛⢻⣶⣦⣦⡈⠓⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡀⠨⣿⠿⣧⣽⡦⎥
+    ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠙⢦⠈⠳⡿⣿⣿⎦
+
+``` julia
+c_ops = mapreduce(i -> sqrt(γ) * op_i(σm, i, Val(N)), vcat, 1:N);
+```
 
 ### The vectorized representation of the density matrix
 
 The Liouvillian $\mathcal{L}$ is a superoperator, meaning that it acts
-on operators. A convenient way to represent its action is by vectorizing
-the density matrix
+on operators. A convenient way to represent its action on $\hat{\rho}$
+is by vectorizing the density matrix
 
 $$
 \hat{\rho} =
@@ -251,3 +301,143 @@ $$
 \rho_{NN}
 \end{pmatrix} \, .
 $$
+
+In this framework, the Liouvillian is represented by a matrix, and it is
+generally used when solving the master equation in
+<a href="#eq-master-equation" class="quarto-xref">Equation 2</a>.
+
+``` julia
+L = liouvillian(H, c_ops)
+```
+
+    Quantum Object:   type=SuperOperator   dims=[2, 2, 2, 2, 2, 2, 2, 2, 2, 2]   size=(1048576, 1048576)
+    1048576×1048576 SparseMatrixCSC{ComplexF64, Int64} with 24641535 stored entries:
+    ⎡⣿⣿⣾⢦⡀⠳⣄⠀⠀⠀⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎤
+    ⎢⠺⣟⢻⣶⣿⡂⠈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⢤⡈⠻⠻⠿⣧⣤⣠⡈⠳⠄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠙⢦⡀⠀⣻⣿⣿⣙⣦⡀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠙⢦⡈⠳⣼⣿⣿⡆⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠙⢦⡀⠀⠀⠁⠀⠈⠈⠉⣿⣿⣾⢦⡀⠳⣄⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠺⣟⢻⣶⣿⡂⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⢤⡈⠻⠻⠿⣧⣤⣠⡈⠳⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡀⠀⣻⣿⣿⣙⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡈⠳⣼⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⣄⎥
+    ⎢⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⡟⢦⡈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣍⣿⣿⣯⠀⠈⠳⣄⠀⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢦⡈⠋⠛⢻⣶⣦⣦⡈⠓⠀⠀⠀⠈⠳⣄⠀⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠨⣿⠿⣧⣽⡦⠀⠀⠀⠀⠀⠈⠳⣄⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠙⢦⠈⠳⡿⣿⣿⣀⡀⡀⠀⢀⠀⠀⠈⠳⣄⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠸⣿⣿⡟⢦⡈⠳⣄⠀⠀⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠈⠻⣍⣿⣿⣯⠀⠈⠳⣄⠀⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠐⢦⡈⠋⠛⢻⣶⣦⣦⡈⠓⎥
+    ⎢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠀⠀⠀⠀⠀⠙⢦⡀⠀⠀⠙⢦⡀⠨⣿⠿⣧⣽⡦⎥
+    ⎣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠀⠀⠀⠀⠀⠙⢦⠀⠀⠀⠙⢦⠈⠳⡿⣿⣿⎦
+
+### Simulation of the master equation on the CPU
+
+Let’s simulate the dynamics of the system.
+
+``` julia
+ψ0 = mapreduce(i -> i == 1 ? basis(2, 1) : basis(2, 0), tensor, 1:N)
+
+tlist = range(0, 10, 100)
+
+e_ops = [mapreduce(i -> op_i(σz, i, Val(N)), +, 1:N)]
+
+result = mesolve(H, ψ0, tlist, c_ops, e_ops=e_ops)
+```
+
+    Progress: [                              ]   2.0% --- Elapsed Time: 0h 00m 01s (ETA: 0h 00m 49s)Progress: [=                             ]   4.0% --- Elapsed Time: 0h 00m 02s (ETA: 0h 00m 48s)Progress: [=                             ]   6.0% --- Elapsed Time: 0h 00m 03s (ETA: 0h 00m 47s)Progress: [==                            ]   8.0% --- Elapsed Time: 0h 00m 05s (ETA: 0h 00m 57s)Progress: [===                           ]  10.0% --- Elapsed Time: 0h 00m 06s (ETA: 0h 00m 54s)Progress: [===                           ]  12.0% --- Elapsed Time: 0h 00m 07s (ETA: 0h 00m 51s)Progress: [====                          ]  14.0% --- Elapsed Time: 0h 00m 09s (ETA: 0h 00m 55s)Progress: [====                          ]  16.0% --- Elapsed Time: 0h 00m 10s (ETA: 0h 00m 52s)Progress: [=====                         ]  18.0% --- Elapsed Time: 0h 00m 11s (ETA: 0h 00m 50s)Progress: [======                        ]  20.0% --- Elapsed Time: 0h 00m 13s (ETA: 0h 00m 52s)Progress: [======                        ]  22.0% --- Elapsed Time: 0h 00m 14s (ETA: 0h 00m 49s)Progress: [=======                       ]  24.0% --- Elapsed Time: 0h 00m 15s (ETA: 0h 00m 47s)Progress: [=======                       ]  26.0% --- Elapsed Time: 0h 00m 17s (ETA: 0h 00m 48s)Progress: [========                      ]  28.0% --- Elapsed Time: 0h 00m 18s (ETA: 0h 00m 46s)Progress: [=========                     ]  30.0% --- Elapsed Time: 0h 00m 19s (ETA: 0h 00m 44s)Progress: [=========                     ]  32.0% --- Elapsed Time: 0h 00m 21s (ETA: 0h 00m 44s)Progress: [==========                    ]  34.0% --- Elapsed Time: 0h 00m 22s (ETA: 0h 00m 42s)Progress: [==========                    ]  36.0% --- Elapsed Time: 0h 00m 23s (ETA: 0h 00m 40s)Progress: [===========                   ]  38.0% --- Elapsed Time: 0h 00m 25s (ETA: 0h 00m 40s)Progress: [============                  ]  40.0% --- Elapsed Time: 0h 00m 26s (ETA: 0h 00m 39s)Progress: [============                  ]  42.0% --- Elapsed Time: 0h 00m 27s (ETA: 0h 00m 37s)Progress: [=============                 ]  44.0% --- Elapsed Time: 0h 00m 29s (ETA: 0h 00m 36s)Progress: [=============                 ]  46.0% --- Elapsed Time: 0h 00m 30s (ETA: 0h 00m 35s)Progress: [==============                ]  48.0% --- Elapsed Time: 0h 00m 31s (ETA: 0h 00m 33s)Progress: [===============               ]  50.0% --- Elapsed Time: 0h 00m 33s (ETA: 0h 00m 33s)Progress: [===============               ]  52.0% --- Elapsed Time: 0h 00m 34s (ETA: 0h 00m 31s)Progress: [================              ]  54.0% --- Elapsed Time: 0h 00m 35s (ETA: 0h 00m 29s)Progress: [================              ]  56.0% --- Elapsed Time: 0h 00m 37s (ETA: 0h 00m 29s)Progress: [=================             ]  58.0% --- Elapsed Time: 0h 00m 38s (ETA: 0h 00m 27s)Progress: [==================            ]  60.0% --- Elapsed Time: 0h 00m 40s (ETA: 0h 00m 26s)Progress: [==================            ]  62.0% --- Elapsed Time: 0h 00m 41s (ETA: 0h 00m 25s)Progress: [===================           ]  64.0% --- Elapsed Time: 0h 00m 42s (ETA: 0h 00m 23s)Progress: [====================          ]  67.0% --- Elapsed Time: 0h 00m 44s (ETA: 0h 00m 21s)Progress: [=====================         ]  70.0% --- Elapsed Time: 0h 00m 45s (ETA: 0h 00m 19s)Progress: [=====================         ]  73.0% --- Elapsed Time: 0h 00m 46s (ETA: 0h 00m 17s)Progress: [======================        ]  76.0% --- Elapsed Time: 0h 00m 48s (ETA: 0h 00m 15s)Progress: [=======================       ]  79.0% --- Elapsed Time: 0h 00m 49s (ETA: 0h 00m 13s)Progress: [========================      ]  82.0% --- Elapsed Time: 0h 00m 50s (ETA: 0h 00m 10s)Progress: [=========================     ]  85.0% --- Elapsed Time: 0h 00m 52s (ETA: 0h 00m 09s)Progress: [==========================    ]  88.0% --- Elapsed Time: 0h 00m 53s (ETA: 0h 00m 07s)Progress: [===========================   ]  91.0% --- Elapsed Time: 0h 00m 54s (ETA: 0h 00m 05s)Progress: [============================  ]  94.0% --- Elapsed Time: 0h 00m 56s (ETA: 0h 00m 03s)Progress: [============================= ]  97.0% --- Elapsed Time: 0h 00m 57s (ETA: 0h 00m 01s)Progress: [==============================] 100.0% --- Elapsed Time: 0h 00m 58s (ETA: 0h 00m 00s)
+
+    Solution of time evolution
+    (return code: Success)
+    --------------------------
+    num_states = 1
+    num_expect = 1
+    ODE alg.: OrdinaryDiffEqTsit5.Tsit5{typeof(OrdinaryDiffEqCore.trivial_limiter!), typeof(OrdinaryDiffEqCore.trivial_limiter!), Static.False}(OrdinaryDiffEqCore.trivial_limiter!, OrdinaryDiffEqCore.trivial_limiter!, static(false))
+    abstol = 1.0e-8
+    reltol = 1.0e-6
+
+We observe that the simulation runs quite slowly. In the next section,
+we will leverage GPU acceleration using
+[CUDA.jl](https://github.com/JuliaGPU/CUDA.jl), which is seamlessly
+integrated into QuantumToolbox.jl.
+
+### Simulation of the master equation on the GPU
+
+To run on the GPU using CUDA.jl, we only need to convert the
+`QuantumObject`s using the `cu` function.
+
+``` julia
+using CUDA
+CUDA.allowscalar(false)
+```
+
+``` julia
+H_gpu = cu(H)
+c_ops_gpu = cu.(c_ops)
+ψ0_gpu = cu(ψ0)
+
+e_ops_gpu = cu.(e_ops)
+
+mesolve(H_gpu, ψ0_gpu, tlist, c_ops_gpu, e_ops=e_ops_gpu, progress_bar=Val(false)) # warm-up
+
+result_gpu = mesolve(H_gpu, ψ0_gpu, tlist, c_ops_gpu, e_ops=e_ops_gpu)
+```
+
+    Progress: [======                        ]  20.0% --- Elapsed Time: 0h 00m 01s (ETA: 0h 00m 04s)Progress: [==========================    ]  87.0% --- Elapsed Time: 0h 00m 02s (ETA: 0h 00m 00s)Progress: [==============================] 100.0% --- Elapsed Time: 0h 00m 02s (ETA: 0h 00m 00s)
+
+    Solution of time evolution
+    (return code: Success)
+    --------------------------
+    num_states = 1
+    num_expect = 1
+    ODE alg.: OrdinaryDiffEqTsit5.Tsit5{typeof(OrdinaryDiffEqCore.trivial_limiter!), typeof(OrdinaryDiffEqCore.trivial_limiter!), Static.False}(OrdinaryDiffEqCore.trivial_limiter!, OrdinaryDiffEqCore.trivial_limiter!, static(false))
+    abstol = 1.0e-8
+    reltol = 1.0e-6
+
+And we can plot the results of both CPU and GPU simulations.
+
+``` julia
+fig = Figure(size=(700, 300), fontsize=15)
+ax = Axis(fig[1, 1], xlabel="Time", ylabel=L"\langle \hat{\sigma}_z \rangle")
+
+lines!(ax, result.times, real.(result.expect[1,:]), linewidth=3, label="CPU")
+lines!(ax, result_gpu.times, real.(result_gpu.expect[1,:]), linewidth=3, label="GPU", linestyle=:dash)
+
+axislegend(ax)
+
+xlims!(ax, result.times[1], result.times[end])
+
+fig
+```
+
+<img src="introduction_files/figure-commonmark/cell-13-output-1.png"
+width="700" height="300" />
+
+------------------------------------------------------------------------
+
+## System Information
+
+``` julia
+using InteractiveUtils
+
+versioninfo()
+```
+
+    Julia Version 1.11.1
+    Commit 8f5b7ca12ad (2024-10-16 10:53 UTC)
+    Build Info:
+      Official https://julialang.org/ release
+    Platform Info:
+      OS: Linux (x86_64-linux-gnu)
+      CPU: 32 × 13th Gen Intel(R) Core(TM) i9-13900KF
+      WORD_SIZE: 64
+      LLVM: libLLVM-16.0.6 (ORCJIT, alderlake)
+    Threads: 16 default, 0 interactive, 8 GC (on 32 virtual cores)
+    Environment:
+      JULIA_PYTHONCALL_EXE = ../pyenv/bin/python
+      LD_LIBRARY_PATH = /usr/local/lib:
+      JULIA_NUM_THREADS = 16
+      JULIA_CONDAPKG_BACKEND = Null
+      JULIA_LOAD_PATH = @:@stdlib
