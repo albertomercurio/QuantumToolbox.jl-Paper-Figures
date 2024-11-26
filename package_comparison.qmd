@@ -30,6 +30,7 @@ jnp = jax.numpy
 dynamiqs = pyimport("dynamiqs")
 
 dynamiqs.set_device("cpu")
+dynamiqs.set_precision("double") # Se the same precision as the others
 ```
 
 ## Master Equation simulation
