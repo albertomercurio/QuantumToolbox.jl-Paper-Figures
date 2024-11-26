@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://albertomercurio.github.io/QuantumToolbox-Benchmarks/pyenv/lib/python3.11/site-packages/numpy/random/LICENSE.html</loc>
+    <loc>https://albertomercurio.github.io/Lectures/pyenv/lib/python3.11/site-packages/numpy/random/LICENSE.html</loc>
     <lastmod>2024-11-19T14:52:26.389Z</lastmod>
   </url>
   <url>
-    <loc>https://albertomercurio.github.io/QuantumToolbox-Benchmarks/package_comparison.html</loc>
-    <lastmod>2024-11-26T15:53:03.218Z</lastmod>
+    <loc>https://albertomercurio.github.io/Lectures/package_comparison.html</loc>
+    <lastmod>2024-11-26T16:07:40.913Z</lastmod>
   </url>
   <url>
-    <loc>https://albertomercurio.github.io/QuantumToolbox-Benchmarks/index.html</loc>
+    <loc>https://albertomercurio.github.io/Lectures/index.html</loc>
     <lastmod>2024-11-19T20:05:02.483Z</lastmod>
   </url>
   <url>
-    <loc>https://albertomercurio.github.io/QuantumToolbox-Benchmarks/about.html</loc>
+    <loc>https://albertomercurio.github.io/Lectures/about.html</loc>
     <lastmod>2024-11-19T20:05:02.483Z</lastmod>
   </url>
 </urlset>

@@ -1,1 +1,1 @@
-Sitemap: https://albertomercurio.github.io/QuantumToolbox-Benchmarks/sitemap.xml
+Sitemap: https://albertomercurio.github.io/Lectures/sitemap.xml
