@@ -154,29 +154,55 @@ Finally, the `dims` field contains the list of dimensions of the Hilbert spaces.
 
 ## Large Hilbert Spaces: The Need for GPU Acceleration
 
-The example above was quite simple, where an analytical solution was known. However, in many cases, the system is more complex and even the numerical solution can be challenging. For instance, the Hilbert space dimension can be very large when considering many subsystems. Let's make a practical example by considering a 2-dimensional transverse field Ising model with 3x2 spins. The Hamiltonian is given by
+The example above was quite simple, where an analytical solution was known. However, in many cases, the system is more complex and even the numerical solution can be challenging. For instance, the Hilbert space dimension can be very large when considering many subsystems. Let's make a practical example by considering a transverse field Ising model with 10 spins. The Hamiltonian is given by
 
 $$
 \hat{H} = \frac{J_z}{2} \sum_{\langle i,j \rangle} \hat{\sigma}_i^z \hat{\sigma}_j^z + h_x \sum_i \hat{\sigma}_i^x \, ,
-$$
+$$ {#eq-transverse-field-ising}
 
-and, since we are including losses, the time evolution of the density matrix is governed by the Lindblad master equation
+where $\hat{\sigma}_i^z$ and $\hat{\sigma}_i^x$ are the Pauli matrices acting on the $i$-th spin and, since we are including losses, the time evolution of the density matrix is governed by the Lindblad master equation
 
 $$
 \frac{d}{d t} \hat{\rho} = \mathcal{L}[\hat{\rho}] = -i[\hat{H}, \hat{\rho}] + \sum_k \left( \hat{L}_k \hat{\rho} \hat{L}_k^\dagger - \frac{1}{2} \{\hat{L}_k^\dagger \hat{L}_k, \hat{\rho}\} \right) \, ,
-$$
+$$ {#eq-master-equation}
 
 with the dissipators
 
 $$
 \hat{L}_k = \sqrt{\gamma} \hat{\sigma}_k^- \, ,
-$$
+$$ {#eq-transverse-field-ising-dissipators}
 
-and $\gamma$ the decay rate.
+where $\hat{\sigma}_k^-$ is the lowering operator acting on the $k$-th spin, and $\gamma$ the decay rate.
+
+```{julia}
+N = 10 # Total number of spins
+Jz = 1.0
+hx = 0.5
+γ = 0.1
+
+σx = sigmax()
+σz = sigmaz()
+σm = sigmam()
+
+# Efficient way to generate the operator on the i-th spin
+function op_i(op, i, ::Val{N}) where N
+    data = kron(qeye(2^(i-1)).data, op.data, qeye(2^(N-i)).data)
+    type = Operator
+    dims = ntuple(x -> 2, Val(N))
+
+    return Qobj(data, type = type, dims = dims)
+end
+
+H = Jz / 2 * mapreduce(i -> op_i(σz, i, Val(N)) * op_i(σz, i + 1, Val(N)), +, 1:N-1) + hx * mapreduce(i -> op_i(σx, i, Val(N)), +, 1:N)
+```
+
+```{julia}
+c_ops = mapreduce(i -> sqrt(γ) * op_i(σm, i, Val(N)), vcat, 1:N);
+```
 
 ### The vectorized representation of the density matrix
 
-The Liouvillian $\mathcal{L}$ is a superoperator, meaning that it acts on operators. A convenient way to represent its action is by vectorizing the density matrix
+The Liouvillian $\mathcal{L}$ is a superoperator, meaning that it acts on operators. A convenient way to represent its action on $\hat{\rho}$ is by vectorizing the density matrix
 
 $$
 \hat{\rho} =
@@ -203,3 +229,77 @@ $$
 \rho_{NN}
 \end{pmatrix} \, .
 $$
+
+In this framework, the Liouvillian is represented by a matrix, and it is generally used when solving the master equation in @eq-master-equation.
+
+```{julia}
+L = liouvillian(H, c_ops)
+```
+
+### Simulation of the master equation on the CPU
+
+Let's simulate the dynamics of the system.
+
+```{julia}
+ψ0 = mapreduce(i -> i == 1 ? basis(2, 1) : basis(2, 0), tensor, 1:N)
+
+tlist = range(0, 10, 100)
+
+e_ops = [mapreduce(i -> op_i(σz, i, Val(N)), +, 1:N)]
+
+mesolve(L, ψ0, tlist[1:2], e_ops=e_ops, progress_bar=Val(false)) # warm-up
+
+@time result = mesolve(L, ψ0, tlist, e_ops=e_ops, progress_bar=Val(false))
+```
+
+We observe that the simulation runs quite slowly. In the next section, we will leverage GPU acceleration using [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl), which is seamlessly integrated into QuantumToolbox.jl.
+
+### Simulation of the master equation on the GPU
+
+To run on the GPU using CUDA.jl, we only need to convert the `QuantumObject`s using the `cu` function.
+
+```{julia}
+using CUDA
+CUDA.allowscalar(false)
+```
+
+```{julia}
+L_gpu = cu(L)
+ψ0_gpu = cu(ψ0)
+
+e_ops_gpu = cu.(e_ops)
+
+mesolve(L_gpu, ψ0_gpu, tlist[1:2], e_ops=e_ops_gpu, progress_bar=Val(false)) # warm-up
+
+@time result_gpu = mesolve(L_gpu, ψ0_gpu, tlist, e_ops=e_ops_gpu, progress_bar=Val(false))
+```
+
+And we can plot the results of both CPU and GPU simulations.
+
+```{julia}
+fig = Figure(size=(700, 300), fontsize=15)
+ax = Axis(fig[1, 1], xlabel="Time", ylabel=L"\langle \hat{\sigma}_z \rangle")
+
+lines!(ax, result.times, real.(result.expect[1,:]), linewidth=3, label="CPU")
+lines!(ax, result_gpu.times, real.(result_gpu.expect[1,:]), linewidth=3, label="GPU", linestyle=:dash)
+
+axislegend(ax)
+
+xlims!(ax, result.times[1], result.times[end])
+
+fig
+```
+
+---
+
+## System Information
+
+```{julia}
+using InteractiveUtils
+
+versioninfo()
+```
+
+```{julia}
+CUDA.versioninfo()
+```

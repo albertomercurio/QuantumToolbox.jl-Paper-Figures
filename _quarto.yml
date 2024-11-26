@@ -26,8 +26,6 @@ format:
     toc: true
     code-line-numbers: true
     colorlinks: true
-  gfm:
-    preview-mode: raw
 
 execute:
   cache: true
