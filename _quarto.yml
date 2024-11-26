@@ -8,9 +8,16 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - href: package_comparison.qmd
-        text: Comparison with other packages
+      - text: "QuantumToolbox.jl"
+        menu:
+          - text: Introduction
+            href: QuantumToolbox.jl/introduction.qmd
+          - text: Comparison with other packages
+            href: QuantumToolbox.jl/package_comparison.qmd
       - about.qmd
+    tools:
+      - icon: github
+        href:  https://github.com/albertomercurio/Lectures
 
 format:
   html:
@@ -18,3 +25,9 @@ format:
     css: styles.css
     toc: true
     code-line-numbers: true
+    colorlinks: true
+  gfm:
+    preview-mode: raw
+
+execute:
+  cache: true
