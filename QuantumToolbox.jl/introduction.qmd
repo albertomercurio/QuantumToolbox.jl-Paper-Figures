@@ -98,7 +98,7 @@ And we can plot the results using [Makie.jl](https://github.com/MakieOrg/Makie.j
 ```{julia}
 using CairoMakie
 
-fig = Figure(size=(700, 300), fontsize=15)
+fig = Figure(size=(700, 300), fontsize=20)
 ax = Axis(fig[1, 1], xlabel="Time", ylabel=L"\langle \hat{a} + \hat{a}^\dagger \rangle")
 
 lines!(ax, result.times, real.(result.expect[1,:]), linewidth=3, label="Numerical")
@@ -160,7 +160,7 @@ $$
 \hat{H} = \frac{J_z}{2} \sum_{\langle i,j \rangle} \hat{\sigma}_i^z \hat{\sigma}_j^z + h_x \sum_i \hat{\sigma}_i^x \, ,
 $$ {#eq-transverse-field-ising}
 
-where $\hat{\sigma}_i^z$ and $\hat{\sigma}_i^x$ are the Pauli matrices acting on the $i$-th spin and, since we are including losses, the time evolution of the density matrix is governed by the Lindblad master equation
+where $\hat{\sigma}_i^z$ and $\hat{\sigma}_i^x$ are the Pauli matrices acting on the $i$-th spin. Since we are including losses, the time evolution of the density matrix is governed by the Lindblad master equation
 
 $$
 \frac{d}{d t} \hat{\rho} = \mathcal{L}[\hat{\rho}] = -i[\hat{H}, \hat{\rho}] + \sum_k \left( \hat{L}_k \hat{\rho} \hat{L}_k^\dagger - \frac{1}{2} \{\hat{L}_k^\dagger \hat{L}_k, \hat{\rho}\} \right) \, ,
@@ -173,6 +173,8 @@ $$
 $$ {#eq-transverse-field-ising-dissipators}
 
 where $\hat{\sigma}_k^-$ is the lowering operator acting on the $k$-th spin, and $\gamma$ the decay rate.
+
+![An open quantum system interacting with the many degrees of freedom of its surrounding environment.](https://www.uni-ulm.de/fileadmin/_processed_/9/a/csm_OpenQuanutmSystems_vonMichael_54018bec90.png){width="70%"}
 
 ```{julia}
 N = 10 # Total number of spins
@@ -277,7 +279,7 @@ mesolve(L_gpu, ψ0_gpu, tlist[1:2], e_ops=e_ops_gpu, progress_bar=Val(false)) # 
 And we can plot the results of both CPU and GPU simulations.
 
 ```{julia}
-fig = Figure(size=(700, 300), fontsize=15)
+fig = Figure(size=(700, 300), fontsize=20)
 ax = Axis(fig[1, 1], xlabel="Time", ylabel=L"\langle \hat{\sigma}_z \rangle")
 
 lines!(ax, result.times, real.(result.expect[1,:]), linewidth=3, label="CPU")
@@ -290,6 +292,146 @@ xlims!(ax, result.times[1], result.times[end])
 fig
 ```
 
+## Massive Parallelization of quantum trajectories
+
+The master equation is a deterministic evolution of the density matrix, but it is not the only way to simulate the dynamics of an open quantum system. In many cases, it is more useful to use Monte Carlo quantum trajectories. In each trajectory, the system is in a pure state and evolves according to the Schrödinger equation
+
+$$
+i \frac{d}{d t} \vert \psi(t) \rangle = \hat{H}_\mathrm{eff} \vert \psi(t) \rangle \, ,
+$$
+
+where $\hat{H}_\mathrm{eff}$ is the effective Hamiltonian
+
+$$
+\hat{H}_\mathrm{eff} = \hat{H} - \frac{i}{2} \sum_k \hat{L}_k^\dagger \hat{L}_k \, .
+$$
+
+Thus, the state evolves following a non-unitary evolution, and its norm decreases in time. When the norm reaches a randomly generated threshold $r$, a quantum jump occurs, and the new state becomes
+
+$$
+\vert \psi(t + dt) \rangle \to \frac{\hat{L}_k \vert \psi(t) \rangle}{\sqrt{\langle \psi(t) \vert \hat{L}_k^\dagger \hat{L}_k \vert \psi(t) \rangle}} \, .
+$$
+
+By averaging over many trajectories, we converge to the solution of the master equation in @eq-master-equation. The code is more or less the same as before, but we need to use the `mcsolve` function instead of `mesolve`.
+
+In general, the Monte Carlo method scales better with the Hilbert space dimension. To give an example, let's consider a 4x4 transverse field Ising model with 16 spins and periodi boundary conditions. Here we use the [`Lattice`](https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.Lattice) struct and the [`DissipativeIsing`](https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.DissipativeIsing) function to easily generate the Hamiltonian and the dissipators.
+
+```{julia}
+# Define lattice
+
+Nx = 4
+Ny = 4
+latt = Lattice(Nx = Nx, Ny = Ny)
+
+# Define Hamiltonian and collapse operators
+Jx = 0.0
+Jy = 0.0
+Jz = 1.0
+hx = 0.2
+hy = 0.0
+hz = 0.0
+γ = 1
+
+Sx = mapreduce(i->SingleSiteOperator(sigmax(), i, latt), +, 1:latt.N)
+Sy = mapreduce(i->SingleSiteOperator(sigmay(), i, latt), +, 1:latt.N)
+Sz = mapreduce(i->SingleSiteOperator(sigmaz(), i, latt), +, 1:latt.N)
+
+H, c_ops = DissipativeIsing(Jx, Jy, Jz, hx, hy, hz, γ, latt; boundary_condition = Val(:periodic_bc), order = 1)
+e_ops = [Sx, Sy, Sz]
+
+# Time Evolution
+
+ψ0 = fock(2^latt.N, 0, dims = ntuple(i->2, Val(latt.N)))
+
+tlist = range(0, 0.1, 100)
+
+ntraj = 100
+
+mcsolve(H, ψ0, tlist[1:2], c_ops, e_ops=e_ops, ntraj=Threads.nthreads(), progress_bar=Val(false)) # warm-up
+
+@time sol_mc = mcsolve(H, ψ0, tlist, c_ops, e_ops=e_ops, ntraj=ntraj, progress_bar=Val(false))
+```
+
+Despite integrating over a short time and the small number of trajectories, we can see that the simulation is very slow, due to the huge Hilbert space dimension. However, we can leverage the massive parallelization on a cluster, thanks to the [Distributed.jl](https://docs.julialang.org/en/v1/manual/distributed-computing/) and [ClusterManagers.jl](https://github.com/JuliaParallel/ClusterManagers.jl) packages. With QuantumToolbox.jl, we can easily distribute the computation over multiple nodes. The following examples are applied to a cluster with the [SLURM](https://slurm.schedmd.com/documentation.html) workload manager.
+
+We start by creating a file named `run.batch` with the following content:
+
+```bash
+#!/bin/bash
+#SBATCH --output=output.out
+#SBATCH --nodes=20
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=72
+#SBATCH --time=0:10:00
+
+# Set PATH to include the directory of your custom Julia installation
+export PATH=/home/username/.juliaup/bin:$PATH
+
+# Now run Julia
+julia --project script.jl
+```
+
+where we have to replace `username` with the name of your account. This script will be used to submit the job to the cluster. Here, we are requesting 20 nodes with 72 threads each (1440 parallel jobs).
+
+The `script.jl` contains the following content:
+
+```{julia}
+#| eval: false
+
+using Distributed
+using ClusterManagers
+
+const SLURM_NUM_TASKS = parse(Int, ENV["SLURM_NTASKS"])
+const SLURM_CPUS_PER_TASK = parse(Int, ENV["SLURM_CPUS_PER_TASK"])
+
+exeflags = ["--project=.", "-t $SLURM_CPUS_PER_TASK"]
+addprocs(SlurmManager(SLURM_NUM_TASKS); exeflags=exeflags, topology=:master_worker)
+
+
+println("################")
+println("Hello! You have $(nworkers()) workers with $(remotecall_fetch(Threads.nthreads, 2)) threads each.")
+
+println("----------------")
+
+
+println("################")
+
+flush(stdout)
+
+@everywhere begin
+    using QuantumToolbox
+    using OrdinaryDiffEq
+
+    BLAS.set_num_threads(1)
+end
+
+# ...
+# Define the Hamiltonian and collapse operators as in the previous example
+# ...
+
+tlist = range(0, 10, 100) # longer time evolution
+ntraj = 5000
+
+sol_mc = mcsolve(H, ψ0, tlist, c_ops, e_ops=e_ops, ntraj=5000, ensemble_method=EnsembleSplitThreads())
+
+println("FINISH!")
+
+rmprocs(workers())
+```
+
+Where we used the keyword argument `ensemble_method=EnsembleSplitThreads()` to distribute the computation over multiple nodes. After running the `run.batch` script, we can check the output file `output.out` to see the results.
+
+```
+################
+Hello! You have 20 workers with 72 threads each.
+----------------
+################
+
+Progress: [==============================] 100.0% --- Elapsed Time: 0h 04m 50s (ETA: 0h 00m 00s)
+
+FINISH!
+```
+
 ## Visualization of Quantum States
 
 QuantumToolbox.jl provides a simple way to visualize quantum states using the Wigner function. Given a quantum state defined by the density matrix $\hat{\rho}$, the Wigner function is defined as
@@ -298,7 +440,98 @@ $$
 W(x, p) = \frac{1}{\pi} \int_{-\infty}^{+\infty} dy \ e^{2ipy} \left\langle x + y \right| \hat{\rho} \left| x - y \right\rangle \, ,
 $$
 
-which can be seen as a quasi-probability distribution in phase space.
+which can be seen as a quasi-probability distribution in phase space. As a first example, let's consider a coherent state
+
+$$
+\vert \alpha \rangle = e^{-\frac{1}{2} \vert \alpha \vert^2} \sum_{n=0}^\infty \frac{\alpha^n}{\sqrt{n!}} \vert n \rangle \, ,
+$$
+
+which is the most classical-like quantum state. The Wigner function of a coherent state is a Gaussian centered at the point $(\text{Re}(\alpha), \text{Im}(\alpha))$^[Up to a normalization factor]. Let's plot the Wigner function of a coherent state with $\alpha = 1 + 2i$.
+
+```{julia}
+N = 50 # Cutoff for Fock states
+α = 1 + 2im
+
+ψ = coherent(N, α)
+
+x = range(-3, 3, 200)
+p = range(-3, 3, 200)
+
+# g is the normalization factor. g=2 ensures that the position of the peak is at the point (Re(α), Im(α))
+W = wigner(ψ, x, p, g=2)
+
+vmax = max(maximum(abs, W), minimum(abs, W))
+
+fig = Figure(size=(700, 600), fontsize=20)
+ax = Axis(fig[1, 1], xlabel=L"\Re(\alpha)", ylabel=L"\Im(\alpha)")
+
+img = heatmap!(ax, x, p, W', interpolate=true, rasterize=2, colorrange=(-vmax, vmax), colormap=:seismic)
+
+Colorbar(fig[1, 2], img)
+
+colsize!(fig.layout, 1, Aspect(1, 1))
+
+fig
+```
+
+Let's now consider the Schrödinger cat state
+
+$$
+\vert \mathcal{C}_\alpha^+ \rangle = \frac{1}{N_\alpha^+} \left( \vert \alpha \rangle + \vert -\alpha \rangle \right) \, ,
+$$
+
+where $N_\alpha^+$ is a normalization factor, and $\vert \alpha \rangle$ is a coherent state. This state can be seen as a quantum superposition of two macroscopically distinct states (like in the Schrödinger's cat thought experiment). The Wigner function now is totally different
+
+```{julia}
+ψ_cat = coherent(N, α) + coherent(N, -α) |> normalize
+
+W_cat = wigner(ψ_cat, x, p, g=2)
+
+vmax = max(maximum(abs, W_cat), minimum(abs, W_cat))
+
+fig = Figure(size=(700, 600), fontsize=20)
+ax = Axis(fig[1, 1], xlabel=L"\Re(\alpha)", ylabel=L"\Im(\alpha)")
+
+img = heatmap!(ax, x, p, W_cat', interpolate=true, rasterize=2, colorrange=(-vmax, vmax), colormap=:seismic)
+
+Colorbar(fig[1, 2], img)
+
+colsize!(fig.layout, 1, Aspect(1, 1))
+
+fig
+```
+
+Where the interference fringes are a signature of the "*quantumness*" of the state.
+
+### GPU Acceleration for the Wigner function
+
+Sometimes, the state for which we want to compute the Wigner function is very large, and the computation can be slow. QuantumToolbox.jl provides a GPU-accelerated version of the Wigner function computation, which can be used by simply converting the phase space coordinates to the GPU.
+
+If we increase the Hilbert space dimension to $N = 120$, and we increase the number of points in the phase space to $500 \times 500$, the computation can be slow on the CPU.
+
+```{julia}
+N = 120
+α = 5 + 7im
+
+ψ_cat = coherent(N, α) + coherent(N, -α) |> normalize
+
+x = range(-10, 10, 500)
+p = range(-10, 10, 500)
+
+@time wigner(ψ_cat, x, p, g=2);
+```
+
+And on the GPU
+
+```{julia}
+x_gpu = CuVector(collect(x))
+p_gpu = CuVector(collect(p))
+
+wigner(ψ_cat, x_gpu, p_gpu, g=2); # warm-up
+
+@time wigner(ψ_cat, x_gpu, p_gpu, g=2);
+```
+
 
 ---
 

@@ -26,6 +26,7 @@ format:
     toc: true
     code-line-numbers: true
     colorlinks: true
+    footnotes-hover: true
 
 execute:
-  cache: true
+  cache: false

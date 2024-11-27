@@ -11,7 +11,7 @@ all: activate publish
 activate:
 	@bash -c "source ${PYENV} && source ${ENV_VARS}"
 
-# Target to load environment variables and run Quarto
+# run Quarto publish command
 publish:
 	quarto publish gh-pages --no-browser
 
