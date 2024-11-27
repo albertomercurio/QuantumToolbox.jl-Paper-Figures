@@ -143,12 +143,12 @@ $$
 
 where we defined $N$ as the cutoff for the Fock states. The `type` field gives the type of the quantum object
 
-- `Ket` for ket states
-- `Bra` for bra states
-- `Operator` for operators
-- `SuperOperator` for superoperators (e.g., Liouvillian)
-- `OperatorKet` for vectorized representation of operators, acting as a ket state
-- `OperatorBra` for vectorized representation of operators, acting as a bra state
+- [`Ket`](https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.KetQuantumObject) for ket states
+- [`Bra`](https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.BraQuantumObject) for bra states
+- [`Operator`](https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.OperatorQuantumObject) for operators
+- [`SuperOperator`](https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.SuperOperatorQuantumObject) for superoperators (e.g., Liouvillian)
+- [`OperatorKet`](https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.OperatorKetQuantumObject) for vectorized representation of operators, acting as a ket state
+- [`OperatorBra`](https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.OperatorBraQuantumObject) for vectorized representation of operators, acting as a bra state
 
 Finally, the `dims` field contains the list of dimensions of the Hilbert spaces. Its length is equal to the number of subsystems, and each element is the dimension of the corresponding subsystem.
 
@@ -289,6 +289,16 @@ xlims!(ax, result.times[1], result.times[end])
 
 fig
 ```
+
+## Visualization of Quantum States
+
+QuantumToolbox.jl provides a simple way to visualize quantum states using the Wigner function. Given a quantum state defined by the density matrix $\hat{\rho}$, the Wigner function is defined as
+
+$$
+W(x, p) = \frac{1}{\pi} \int_{-\infty}^{+\infty} dy \ e^{2ipy} \left\langle x + y \right| \hat{\rho} \left| x - y \right\rangle \, ,
+$$
+
+which can be seen as a quasi-probability distribution in phase space.
 
 ---
 
