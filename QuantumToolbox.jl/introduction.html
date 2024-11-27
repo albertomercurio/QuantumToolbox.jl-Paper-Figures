@@ -534,7 +534,7 @@ reltol = 1.0e-6</code></pre>
 <span id="cb16-8"><a href="#cb16-8"></a></span>
 <span id="cb16-9"><a href="#cb16-9"></a><span class="pp">@time</span> result <span class="op">=</span> <span class="fu">mesolve</span>(L, ψ<span class="fl">0</span>, tlist, e_ops<span class="op">=</span>e_ops, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code> 59.458707 seconds (153 allocations: 288.109 MiB, 0.11% gc time)</code></pre>
+<pre><code> 61.289183 seconds (153 allocations: 288.109 MiB, 0.11% gc time)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>Solution of time evolution
@@ -566,7 +566,7 @@ reltol = 1.0e-6</code></pre>
 <span id="cb20-7"><a href="#cb20-7"></a></span>
 <span id="cb20-8"><a href="#cb20-8"></a><span class="pp">@time</span> result_gpu <span class="op">=</span> <span class="fu">mesolve</span>(L_gpu, ψ<span class="fl">0</span>_gpu, tlist, e_ops<span class="op">=</span>e_ops_gpu, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  1.502146 seconds (522.61 k allocations: 9.563 MiB)</code></pre>
+<pre><code>  1.504772 seconds (522.61 k allocations: 9.563 MiB)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>Solution of time evolution
@@ -653,7 +653,7 @@ i \frac{d}{d t} \vert \psi(t) \rangle = \hat{H}_\mathrm{eff} \vert \psi(t) \rang
 <span id="cb24-32"><a href="#cb24-32"></a></span>
 <span id="cb24-33"><a href="#cb24-33"></a><span class="pp">@time</span> sol_mc <span class="op">=</span> <span class="fu">mcsolve</span>(H, ψ<span class="fl">0</span>, tlist, c_ops, e_ops<span class="op">=</span>e_ops, ntraj<span class="op">=</span>ntraj, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code> 53.707800 seconds (15.67 k allocations: 4.625 GiB, 0.87% gc time)</code></pre>
+<pre><code> 53.865775 seconds (15.67 k allocations: 4.625 GiB, 0.88% gc time)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>Solution of quantum trajectories
@@ -823,7 +823,7 @@ W(x, p) = \frac{1}{\pi} \int_{-\infty}^{+\infty} dy \ e^{2ipy} \left\langle x + 
 <span id="cb32-8"><a href="#cb32-8"></a></span>
 <span id="cb32-9"><a href="#cb32-9"></a><span class="pp">@time</span> <span class="fu">wigner</span>(ψ_cat, x, p, g<span class="op">=</span><span class="fl">2</span>);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  3.698704 seconds (281 allocations: 42.305 MiB)</code></pre>
+<pre><code>  4.036479 seconds (281 allocations: 42.305 MiB)</code></pre>
 </div>
 </div>
 <p>And on the GPU</p>
@@ -835,14 +835,27 @@ W(x, p) = \frac{1}{\pi} \int_{-\infty}^{+\infty} dy \ e^{2ipy} \left\langle x + 
 <span id="cb34-5"><a href="#cb34-5"></a></span>
 <span id="cb34-6"><a href="#cb34-6"></a><span class="pp">@time</span> <span class="fu">wigner</span>(ψ_cat, x_gpu, p_gpu, g<span class="op">=</span><span class="fl">2</span>);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  0.233684 seconds (994.25 k allocations: 16.398 MiB)</code></pre>
+<pre><code>  0.233531 seconds (994.25 k allocations: 16.398 MiB)</code></pre>
 </div>
 </div>
 </section>
 </section>
 <section id="current-features" class="level2">
 <h2 class="anchored" data-anchor-id="current-features">Current features</h2>
-<p>The <code>QuantumToolbox.jl</code> package has already several features: - <code>QuantumObject</code> construct that supports any type of arrays (dense, sparse, <a href="https://github.com/JuliaArrays/StaticArrays.jl">StaticArrays.jl</a>, <a href="https://github.com/JuliaGPU/CUDA.jl">CUDA.jl</a>, <a href="https://github.com/JuliaGPU/oneAPI.jl">oneAPI.jl</a>, <a href="https://github.com/JuliaGPU/Metal.jl">Metal.jl</a>, <a href="https://github.com/JuliaParallel/DistributedArrays.jl">DistributedArrays.jl</a>, …) - Most of the basic operations on quantum operators and states (linear algebra operations, eigenvalues, partial trace, …) - Visualization of quantum states using Wigner functions, with also support for GPU acceleration - Support for the basic time evolution solvers (<code>sesolve</code>, <code>mesolve</code>, <code>mcsolve</code>) with both support for multithreading and distributed computing - Stochastic solvers (homodyne and heterodyne detection) - Support for almost any kind of callbacks during time evolution, thorugh the <code>DiffEqCallbacks.jl</code> package. See, e.g.&nbsp;<em>Dynamical Shifted Fock</em> or <em>Dynamical Fock Dimension</em> time evolutions - Easy calculation of steadystate - Krylov Subspace support for fast linear algebra operations (GPU still supported) - Emission spectrum with both FFT and semi-analytical methods - Entanglement calculation - Detection of symmetries and block-diagonal forms of both operators and superoperators</p>
+<p>The <code>QuantumToolbox.jl</code> package has already several features:</p>
+<ul>
+<li><code>QuantumObject</code> construct that supports any type of arrays (dense, sparse, <a href="https://github.com/JuliaArrays/StaticArrays.jl">StaticArrays.jl</a>, <a href="https://github.com/JuliaGPU/CUDA.jl">CUDA.jl</a>, <a href="https://github.com/JuliaGPU/oneAPI.jl">oneAPI.jl</a>, <a href="https://github.com/JuliaGPU/Metal.jl">Metal.jl</a>, <a href="https://github.com/JuliaParallel/DistributedArrays.jl">DistributedArrays.jl</a>, …)</li>
+<li>Most of the basic operations on quantum operators and states (linear algebra operations, eigenvalues, partial trace, …)</li>
+<li>Visualization of quantum states using Wigner functions, with also support for GPU acceleration</li>
+<li>Support for the basic time evolution solvers (<code>sesolve</code>, <code>mesolve</code>, <code>mcsolve</code>) with both support for multithreading and distributed computing</li>
+<li>Stochastic solvers (homodyne and heterodyne detection)</li>
+<li>Support for almost any kind of callbacks during time evolution, thorugh the <code>DiffEqCallbacks.jl</code> package. See, e.g.&nbsp;<em>Dynamical Shifted Fock</em> or <em>Dynamical Fock Dimension</em> time evolutions</li>
+<li>Easy calculation of steadystate</li>
+<li>Krylov Subspace support for fast linear algebra operations (GPU still supported)</li>
+<li>Emission spectrum with both FFT and semi-analytical methods</li>
+<li>Entanglement calculation</li>
+<li>Detection of symmetries and block-diagonal forms of both operators and superoperators</li>
+</ul>
 <p>However, there is still a lot of work to do:</p>
 <ul>
 <li>Extending the number of solvers</li>
