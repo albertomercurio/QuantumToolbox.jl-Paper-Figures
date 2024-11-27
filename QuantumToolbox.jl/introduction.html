@@ -205,6 +205,10 @@ window.Quarto = {
   <li><a href="#simulation-of-the-master-equation-on-the-cpu" id="toc-simulation-of-the-master-equation-on-the-cpu" class="nav-link" data-scroll-target="#simulation-of-the-master-equation-on-the-cpu">Simulation of the master equation on the CPU</a></li>
   <li><a href="#simulation-of-the-master-equation-on-the-gpu" id="toc-simulation-of-the-master-equation-on-the-gpu" class="nav-link" data-scroll-target="#simulation-of-the-master-equation-on-the-gpu">Simulation of the master equation on the GPU</a></li>
   </ul></li>
+  <li><a href="#visualization-of-quantum-states" id="toc-visualization-of-quantum-states" class="nav-link" data-scroll-target="#visualization-of-quantum-states">Visualization of Quantum States</a>
+  <ul class="collapse">
+  <li><a href="#gpu-acceleration-for-the-wigner-function" id="toc-gpu-acceleration-for-the-wigner-function" class="nav-link" data-scroll-target="#gpu-acceleration-for-the-wigner-function">GPU Acceleration for the Wigner function</a></li>
+  </ul></li>
   <li><a href="#system-information" id="toc-system-information" class="nav-link" data-scroll-target="#system-information">System Information</a></li>
   </ul>
 </nav>
@@ -318,7 +322,7 @@ reltol = 1.0e-6</code></pre>
 <div id="4" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb5-1"><a href="#cb5-1"></a><span class="im">using</span> <span class="bu">CairoMakie</span></span>
 <span id="cb5-2"><a href="#cb5-2"></a></span>
-<span id="cb5-3"><a href="#cb5-3"></a>fig <span class="op">=</span> <span class="fu">Figure</span>(size<span class="op">=</span>(<span class="fl">700</span>, <span class="fl">300</span>), fontsize<span class="op">=</span><span class="fl">15</span>)</span>
+<span id="cb5-3"><a href="#cb5-3"></a>fig <span class="op">=</span> <span class="fu">Figure</span>(size<span class="op">=</span>(<span class="fl">700</span>, <span class="fl">300</span>), fontsize<span class="op">=</span><span class="fl">20</span>)</span>
 <span id="cb5-4"><a href="#cb5-4"></a>ax <span class="op">=</span> <span class="fu">Axis</span>(fig[<span class="fl">1</span>, <span class="fl">1</span>], xlabel<span class="op">=</span><span class="st">"Time"</span>, ylabel<span class="op">=</span>L<span class="st">"\langle \hat{a} + \hat{a}^\dagger </span><span class="sc">\r</span><span class="st">angle"</span>)</span>
 <span id="cb5-5"><a href="#cb5-5"></a></span>
 <span id="cb5-6"><a href="#cb5-6"></a><span class="fu">lines!</span>(ax, result.times, <span class="fu">real</span>.(result.expect[<span class="fl">1</span>,<span class="op">:</span>]), linewidth<span class="op">=</span><span class="fl">3</span>, label<span class="op">=</span><span class="st">"Numerical"</span>)</span>
@@ -379,12 +383,12 @@ reltol = 1.0e-6</code></pre>
 \]</span></p>
 <p>where we defined <span class="math inline">\(N\)</span> as the cutoff for the Fock states. The <code>type</code> field gives the type of the quantum object</p>
 <ul>
-<li><code>Ket</code> for ket states</li>
-<li><code>Bra</code> for bra states</li>
-<li><code>Operator</code> for operators</li>
-<li><code>SuperOperator</code> for superoperators (e.g., Liouvillian)</li>
-<li><code>OperatorKet</code> for vectorized representation of operators, acting as a ket state</li>
-<li><code>OperatorBra</code> for vectorized representation of operators, acting as a bra state</li>
+<li><a href="https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.KetQuantumObject"><code>Ket</code></a> for ket states</li>
+<li><a href="https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.BraQuantumObject"><code>Bra</code></a> for bra states</li>
+<li><a href="https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.OperatorQuantumObject"><code>Operator</code></a> for operators</li>
+<li><a href="https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.SuperOperatorQuantumObject"><code>SuperOperator</code></a> for superoperators (e.g., Liouvillian)</li>
+<li><a href="https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.OperatorKetQuantumObject"><code>OperatorKet</code></a> for vectorized representation of operators, acting as a ket state</li>
+<li><a href="https://qutip.org/QuantumToolbox.jl/stable/resources/api#QuantumToolbox.OperatorBraQuantumObject"><code>OperatorBra</code></a> for vectorized representation of operators, acting as a bra state</li>
 </ul>
 <p>Finally, the <code>dims</code> field contains the list of dimensions of the Hilbert spaces. Its length is equal to the number of subsystems, and each element is the dimension of the corresponding subsystem.</p>
 </section>
@@ -522,7 +526,7 @@ reltol = 1.0e-6</code></pre>
 <span id="cb16-8"><a href="#cb16-8"></a></span>
 <span id="cb16-9"><a href="#cb16-9"></a><span class="pp">@time</span> result <span class="op">=</span> <span class="fu">mesolve</span>(L, ψ<span class="fl">0</span>, tlist, e_ops<span class="op">=</span>e_ops, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code> 60.549423 seconds (153 allocations: 288.109 MiB, 0.11% gc time)</code></pre>
+<pre><code> 67.636760 seconds (153 allocations: 288.109 MiB, 0.14% gc time)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>Solution of time evolution
@@ -554,7 +558,7 @@ reltol = 1.0e-6</code></pre>
 <span id="cb20-7"><a href="#cb20-7"></a></span>
 <span id="cb20-8"><a href="#cb20-8"></a><span class="pp">@time</span> result_gpu <span class="op">=</span> <span class="fu">mesolve</span>(L_gpu, ψ<span class="fl">0</span>_gpu, tlist, e_ops<span class="op">=</span>e_ops_gpu, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  1.500712 seconds (523.14 k allocations: 9.580 MiB)</code></pre>
+<pre><code>  1.513342 seconds (522.61 k allocations: 9.563 MiB)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>Solution of time evolution
@@ -569,7 +573,7 @@ reltol = 1.0e-6</code></pre>
 </div>
 <p>And we can plot the results of both CPU and GPU simulations.</p>
 <div id="24" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb23-1"><a href="#cb23-1"></a>fig <span class="op">=</span> <span class="fu">Figure</span>(size<span class="op">=</span>(<span class="fl">700</span>, <span class="fl">300</span>), fontsize<span class="op">=</span><span class="fl">15</span>)</span>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb23-1"><a href="#cb23-1"></a>fig <span class="op">=</span> <span class="fu">Figure</span>(size<span class="op">=</span>(<span class="fl">700</span>, <span class="fl">300</span>), fontsize<span class="op">=</span><span class="fl">20</span>)</span>
 <span id="cb23-2"><a href="#cb23-2"></a>ax <span class="op">=</span> <span class="fu">Axis</span>(fig[<span class="fl">1</span>, <span class="fl">1</span>], xlabel<span class="op">=</span><span class="st">"Time"</span>, ylabel<span class="op">=</span>L<span class="st">"\langle \hat{\sigma}_z </span><span class="sc">\r</span><span class="st">angle"</span>)</span>
 <span id="cb23-3"><a href="#cb23-3"></a></span>
 <span id="cb23-4"><a href="#cb23-4"></a><span class="fu">lines!</span>(ax, result.times, <span class="fu">real</span>.(result.expect[<span class="fl">1</span>,<span class="op">:</span>]), linewidth<span class="op">=</span><span class="fl">3</span>, label<span class="op">=</span><span class="st">"CPU"</span>)</span>
@@ -588,15 +592,109 @@ reltol = 1.0e-6</code></pre>
 </div>
 </div>
 </div>
+</section>
+</section>
+<section id="visualization-of-quantum-states" class="level2">
+<h2 class="anchored" data-anchor-id="visualization-of-quantum-states">Visualization of Quantum States</h2>
+<p>QuantumToolbox.jl provides a simple way to visualize quantum states using the Wigner function. Given a quantum state defined by the density matrix <span class="math inline">\(\hat{\rho}\)</span>, the Wigner function is defined as</p>
+<p><span class="math display">\[
+W(x, p) = \frac{1}{\pi} \int_{-\infty}^{+\infty} dy \ e^{2ipy} \left\langle x + y \right| \hat{\rho} \left| x - y \right\rangle \, ,
+\]</span></p>
+<p>which can be seen as a quasi-probability distribution in phase space. As a first example, let’s consider a coherent state</p>
+<p><span class="math display">\[
+\vert \alpha \rangle = e^{-\frac{1}{2} \vert \alpha \vert^2} \sum_{n=0}^\infty \frac{\alpha^n}{\sqrt{n!}} \vert n \rangle \, ,
+\]</span></p>
+<p>which is the most classical-like quantum state. The Wigner function of a coherent state is a Gaussian centered at the point <span class="math inline">\((\text{Re}(\alpha), \text{Im}(\alpha))\)</span><a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>. Let’s plot the Wigner function of a coherent state with <span class="math inline">\(\alpha = 1 + 2i\)</span>.</p>
+<div id="26" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb24-1"><a href="#cb24-1"></a>N <span class="op">=</span> <span class="fl">50</span> <span class="co"># Cutoff for Fock states</span></span>
+<span id="cb24-2"><a href="#cb24-2"></a>α <span class="op">=</span> <span class="fl">1</span> <span class="op">+</span> <span class="fl">2im</span></span>
+<span id="cb24-3"><a href="#cb24-3"></a></span>
+<span id="cb24-4"><a href="#cb24-4"></a>ψ <span class="op">=</span> <span class="fu">coherent</span>(N, α)</span>
+<span id="cb24-5"><a href="#cb24-5"></a></span>
+<span id="cb24-6"><a href="#cb24-6"></a>x <span class="op">=</span> <span class="fu">range</span>(<span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">100</span>)</span>
+<span id="cb24-7"><a href="#cb24-7"></a>p <span class="op">=</span> <span class="fu">range</span>(<span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">100</span>)</span>
+<span id="cb24-8"><a href="#cb24-8"></a></span>
+<span id="cb24-9"><a href="#cb24-9"></a><span class="co"># g is the normalization factor. g=2 ensures that the position of the peak is at the point (Re(α), Im(α))</span></span>
+<span id="cb24-10"><a href="#cb24-10"></a>W <span class="op">=</span> <span class="fu">wigner</span>(ψ, x, p, g<span class="op">=</span><span class="fl">2</span>)</span>
+<span id="cb24-11"><a href="#cb24-11"></a></span>
+<span id="cb24-12"><a href="#cb24-12"></a>fig <span class="op">=</span> <span class="fu">Figure</span>(size<span class="op">=</span>(<span class="fl">600</span>, <span class="fl">600</span>), fontsize<span class="op">=</span><span class="fl">20</span>)</span>
+<span id="cb24-13"><a href="#cb24-13"></a>ax <span class="op">=</span> <span class="fu">Axis</span>(fig[<span class="fl">1</span>, <span class="fl">1</span>], xlabel<span class="op">=</span>L<span class="st">"\Re(</span><span class="sc">\a</span><span class="st">lpha)"</span>, ylabel<span class="op">=</span>L<span class="st">"\Im(</span><span class="sc">\a</span><span class="st">lpha)"</span>, aspect<span class="op">=</span><span class="fl">1</span>)</span>
+<span id="cb24-14"><a href="#cb24-14"></a></span>
+<span id="cb24-15"><a href="#cb24-15"></a><span class="fu">heatmap!</span>(ax, x, p, W<span class="op">'</span>, interpolate<span class="op">=</span><span class="cn">true</span>, rasterize<span class="op">=</span><span class="fl">2</span>)</span>
+<span id="cb24-16"><a href="#cb24-16"></a></span>
+<span id="cb24-17"><a href="#cb24-17"></a>fig</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<div>
+<figure class="figure">
+<p><img src="introduction_files/figure-html/cell-14-output-1.svg" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Let’s now consider the Schrödinger cat state</p>
+<p><span class="math display">\[
+\vert \mathcal{C}_\alpha^+ = \frac{1}{N_\alpha^+} \left( \vert \alpha \rangle + \vert -\alpha \rangle \right) \, ,
+\]</span></p>
+<p>where <span class="math inline">\(N_\alpha^+\)</span> is a normalization factor, and <span class="math inline">\(\vert \alpha \rangle\)</span> is a coherent state. This state can be seen as a quantum superposition of two macroscopically distinct states (like in the Schrödinger’s cat thought experiment). The Wigner function now is totally different</p>
+<div id="28" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb25-1"><a href="#cb25-1"></a>ψ_cat <span class="op">=</span> <span class="fu">coherent</span>(N, α) <span class="op">+</span> <span class="fu">coherent</span>(N, <span class="op">-</span>α) <span class="op">|&gt;</span> normalize</span>
+<span id="cb25-2"><a href="#cb25-2"></a></span>
+<span id="cb25-3"><a href="#cb25-3"></a>W_cat <span class="op">=</span> <span class="fu">wigner</span>(ψ_cat, x, p, g<span class="op">=</span><span class="fl">2</span>)</span>
+<span id="cb25-4"><a href="#cb25-4"></a></span>
+<span id="cb25-5"><a href="#cb25-5"></a>fig <span class="op">=</span> <span class="fu">Figure</span>(size<span class="op">=</span>(<span class="fl">600</span>, <span class="fl">600</span>), fontsize<span class="op">=</span><span class="fl">20</span>)</span>
+<span id="cb25-6"><a href="#cb25-6"></a>ax <span class="op">=</span> <span class="fu">Axis</span>(fig[<span class="fl">1</span>, <span class="fl">1</span>], xlabel<span class="op">=</span>L<span class="st">"\Re(</span><span class="sc">\a</span><span class="st">lpha)"</span>, ylabel<span class="op">=</span>L<span class="st">"\Im(</span><span class="sc">\a</span><span class="st">lpha)"</span>, aspect<span class="op">=</span><span class="fl">1</span>)</span>
+<span id="cb25-7"><a href="#cb25-7"></a></span>
+<span id="cb25-8"><a href="#cb25-8"></a><span class="fu">heatmap!</span>(ax, x, p, W_cat<span class="op">'</span>, interpolate<span class="op">=</span><span class="cn">true</span>, rasterize<span class="op">=</span><span class="fl">2</span>)</span>
+<span id="cb25-9"><a href="#cb25-9"></a></span>
+<span id="cb25-10"><a href="#cb25-10"></a>fig</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="1">
+<div>
+<figure class="figure">
+<p><img src="introduction_files/figure-html/cell-15-output-1.svg" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Where the interference fringes are a signature of the “<em>quantumness</em>” of the state.</p>
+<section id="gpu-acceleration-for-the-wigner-function" class="level3">
+<h3 class="anchored" data-anchor-id="gpu-acceleration-for-the-wigner-function">GPU Acceleration for the Wigner function</h3>
+<p>Sometimes, the state for which we want to compute the Wigner function is very large, and the computation can be slow. QuantumToolbox.jl provides a GPU-accelerated version of the Wigner function computation, which can be used by simply converting the phase space coordinates to the GPU.</p>
+<p>If we increase the Hilbert space dimension to <span class="math inline">\(N = 120\)</span>, and we increase the number of points in the phase space to <span class="math inline">\(500 \times 500\)</span>, the computation can be slow on the CPU.</p>
+<div id="30" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb26-1"><a href="#cb26-1"></a>N <span class="op">=</span> <span class="fl">120</span></span>
+<span id="cb26-2"><a href="#cb26-2"></a>α <span class="op">=</span> <span class="fl">5</span> <span class="op">+</span> <span class="fl">7im</span></span>
+<span id="cb26-3"><a href="#cb26-3"></a></span>
+<span id="cb26-4"><a href="#cb26-4"></a>ψ_cat <span class="op">=</span> <span class="fu">coherent</span>(N, α) <span class="op">+</span> <span class="fu">coherent</span>(N, <span class="op">-</span>α) <span class="op">|&gt;</span> normalize</span>
+<span id="cb26-5"><a href="#cb26-5"></a></span>
+<span id="cb26-6"><a href="#cb26-6"></a>x <span class="op">=</span> <span class="fu">range</span>(<span class="op">-</span><span class="fl">10</span>, <span class="fl">10</span>, <span class="fl">500</span>)</span>
+<span id="cb26-7"><a href="#cb26-7"></a>p <span class="op">=</span> <span class="fu">range</span>(<span class="op">-</span><span class="fl">10</span>, <span class="fl">10</span>, <span class="fl">500</span>)</span>
+<span id="cb26-8"><a href="#cb26-8"></a></span>
+<span id="cb26-9"><a href="#cb26-9"></a><span class="pp">@time</span> <span class="fu">wigner</span>(ψ_cat, x, p, g<span class="op">=</span><span class="fl">2</span>);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  4.644652 seconds (28.86 k allocations: 43.844 MiB, 0.32% gc time, 0.21% compilation time)</code></pre>
+</div>
+</div>
+<p>And on the GPU</p>
+<div id="32" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb28-1"><a href="#cb28-1"></a>x_gpu <span class="op">=</span> <span class="fu">CuVector</span>(<span class="fu">collect</span>(x))</span>
+<span id="cb28-2"><a href="#cb28-2"></a>p_gpu <span class="op">=</span> <span class="fu">CuVector</span>(<span class="fu">collect</span>(p))</span>
+<span id="cb28-3"><a href="#cb28-3"></a></span>
+<span id="cb28-4"><a href="#cb28-4"></a><span class="fu">wigner</span>(ψ_cat, x_gpu, p_gpu, g<span class="op">=</span><span class="fl">2</span>); <span class="co"># warm-up</span></span>
+<span id="cb28-5"><a href="#cb28-5"></a></span>
+<span id="cb28-6"><a href="#cb28-6"></a><span class="pp">@time</span> <span class="fu">wigner</span>(ψ_cat, x_gpu, p_gpu, g<span class="op">=</span><span class="fl">2</span>);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  0.233342 seconds (994.49 k allocations: 16.456 MiB)</code></pre>
+</div>
+</div>
 <hr>
 </section>
 </section>
 <section id="system-information" class="level2">
 <h2 class="anchored" data-anchor-id="system-information">System Information</h2>
-<div id="26" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb24-1"><a href="#cb24-1"></a><span class="im">using</span> <span class="bu">InteractiveUtils</span></span>
-<span id="cb24-2"><a href="#cb24-2"></a></span>
-<span id="cb24-3"><a href="#cb24-3"></a><span class="fu">versioninfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="34" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb30-1"><a href="#cb30-1"></a><span class="im">using</span> <span class="bu">InteractiveUtils</span></span>
+<span id="cb30-2"><a href="#cb30-2"></a></span>
+<span id="cb30-3"><a href="#cb30-3"></a><span class="fu">versioninfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Julia Version 1.11.1
 Commit 8f5b7ca12ad (2024-10-16 10:53 UTC)
@@ -616,8 +714,8 @@ Environment:
   JULIA_LOAD_PATH = @:@stdlib</code></pre>
 </div>
 </div>
-<div id="28" class="cell" data-execution_count="1">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb26-1"><a href="#cb26-1"></a>CUDA.<span class="fu">versioninfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="36" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource julia number-lines code-with-copy"><code class="sourceCode julia"><span id="cb32-1"><a href="#cb32-1"></a>CUDA.<span class="fu">versioninfo</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>CUDA runtime 12.6, artifact installation
 CUDA driver 12.4
@@ -642,14 +740,20 @@ Toolchain:
 - LLVM: 16.0.6
 
 1 device:
-  0: NVIDIA GeForce RTX 4090 (sm_89, 20.638 GiB / 23.988 GiB available)</code></pre>
+  0: NVIDIA GeForce RTX 4090 (sm_89, 21.013 GiB / 23.988 GiB available)</code></pre>
 </div>
 </div>
 
 
 </section>
 
-</main> <!-- /main -->
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>Up to a normalization factor<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
