@@ -532,6 +532,32 @@ wigner(ψ_cat, x_gpu, p_gpu, g=2); # warm-up
 @time wigner(ψ_cat, x_gpu, p_gpu, g=2);
 ```
 
+## Current features
+
+The `QuantumToolbox.jl` package has already several features:
+
+- `QuantumObject` construct that supports any type of arrays (dense, sparse, [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl), [CUDA.jl](https://github.com/JuliaGPU/CUDA.jl), [oneAPI.jl](https://github.com/JuliaGPU/oneAPI.jl), [Metal.jl](https://github.com/JuliaGPU/Metal.jl), [DistributedArrays.jl](https://github.com/JuliaParallel/DistributedArrays.jl), ...)
+- Most of the basic operations on quantum operators and states (linear algebra operations, eigenvalues, partial trace, ...)
+- Visualization of quantum states using Wigner functions, with also support for GPU acceleration
+- Support for the basic time evolution solvers (`sesolve`, `mesolve`, `mcsolve`) with both support for multithreading and distributed computing
+- Stochastic solvers (homodyne and heterodyne detection)
+- Support for almost any kind of callbacks during time evolution, thorugh the `DiffEqCallbacks.jl` package. See, e.g. _Dynamical Shifted Fock_ or _Dynamical Fock Dimension_ time evolutions
+- Easy calculation of steadystate
+- Krylov Subspace support for fast linear algebra operations (GPU still supported)
+- Emission spectrum with both FFT and semi-analytical methods
+- Entanglement calculation
+- Detection of symmetries and block-diagonal forms of both operators and superoperators
+
+However, there is still a lot of work to do:
+
+- Extending the number of solvers
+- Support for other quasi-probability distributions, e.g., Husimi Q-function
+- Documentation!!
+- Many others...
+
+::: {.callout-note}
+Contributions are welcome! If you are interested in contributing to the project, please check the [GitHub repository](https://github.com/qutip/QuantumToolbox.jl).
+:::
 
 ---
 
