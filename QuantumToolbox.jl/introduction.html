@@ -534,7 +534,7 @@ reltol = 1.0e-6</code></pre>
 <span id="cb16-8"><a href="#cb16-8"></a></span>
 <span id="cb16-9"><a href="#cb16-9"></a><span class="pp">@time</span> result <span class="op">=</span> <span class="fu">mesolve</span>(L, ψ<span class="fl">0</span>, tlist, e_ops<span class="op">=</span>e_ops, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code> 61.289183 seconds (153 allocations: 288.109 MiB, 0.11% gc time)</code></pre>
+<pre><code> 60.743291 seconds (153 allocations: 288.109 MiB, 0.13% gc time)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>Solution of time evolution
@@ -566,7 +566,7 @@ reltol = 1.0e-6</code></pre>
 <span id="cb20-7"><a href="#cb20-7"></a></span>
 <span id="cb20-8"><a href="#cb20-8"></a><span class="pp">@time</span> result_gpu <span class="op">=</span> <span class="fu">mesolve</span>(L_gpu, ψ<span class="fl">0</span>_gpu, tlist, e_ops<span class="op">=</span>e_ops_gpu, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  1.504772 seconds (522.61 k allocations: 9.563 MiB)</code></pre>
+<pre><code>  1.477725 seconds (522.61 k allocations: 9.563 MiB)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>Solution of time evolution
@@ -653,7 +653,7 @@ i \frac{d}{d t} \vert \psi(t) \rangle = \hat{H}_\mathrm{eff} \vert \psi(t) \rang
 <span id="cb24-32"><a href="#cb24-32"></a></span>
 <span id="cb24-33"><a href="#cb24-33"></a><span class="pp">@time</span> sol_mc <span class="op">=</span> <span class="fu">mcsolve</span>(H, ψ<span class="fl">0</span>, tlist, c_ops, e_ops<span class="op">=</span>e_ops, ntraj<span class="op">=</span>ntraj, progress_bar<span class="op">=</span><span class="fu">Val</span>(<span class="cn">false</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code> 53.865775 seconds (15.67 k allocations: 4.625 GiB, 0.88% gc time)</code></pre>
+<pre><code> 52.888508 seconds (15.67 k allocations: 4.625 GiB, 0.79% gc time)</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="1">
 <pre><code>Solution of quantum trajectories
@@ -823,7 +823,7 @@ W(x, p) = \frac{1}{\pi} \int_{-\infty}^{+\infty} dy \ e^{2ipy} \left\langle x + 
 <span id="cb32-8"><a href="#cb32-8"></a></span>
 <span id="cb32-9"><a href="#cb32-9"></a><span class="pp">@time</span> <span class="fu">wigner</span>(ψ_cat, x, p, g<span class="op">=</span><span class="fl">2</span>);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  4.036479 seconds (281 allocations: 42.305 MiB)</code></pre>
+<pre><code>  3.648226 seconds (281 allocations: 42.305 MiB)</code></pre>
 </div>
 </div>
 <p>And on the GPU</p>
@@ -835,7 +835,7 @@ W(x, p) = \frac{1}{\pi} \int_{-\infty}^{+\infty} dy \ e^{2ipy} \left\langle x + 
 <span id="cb34-5"><a href="#cb34-5"></a></span>
 <span id="cb34-6"><a href="#cb34-6"></a><span class="pp">@time</span> <span class="fu">wigner</span>(ψ_cat, x_gpu, p_gpu, g<span class="op">=</span><span class="fl">2</span>);</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  0.233531 seconds (994.25 k allocations: 16.398 MiB)</code></pre>
+<pre><code>  0.233865 seconds (994.25 k allocations: 16.398 MiB)</code></pre>
 </div>
 </div>
 </section>
