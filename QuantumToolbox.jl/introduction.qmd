@@ -4,8 +4,6 @@ subtitle: "A pure Julia framework for high-performance simulation of quantum sys
 author: Alberto Mercurio
 
 engine: julia
-julia:
-    env: ["JULIA_NUM_THREADS=16", "JULIA_CONDAPKG_BACKEND=Null", "JULIA_PYTHONCALL_EXE=../pyenv/bin/python"]
 ---
 
 ## Introduction

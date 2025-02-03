@@ -3,8 +3,6 @@ title: "Performance Comparison of Quantum Simulation Packages: Julia vs. Python"
 author: "Alberto Mercurio"
 
 engine: julia
-julia:
-    env: ["JULIA_NUM_THREADS=16", "JULIA_CONDAPKG_BACKEND=Null", "JULIA_PYTHONCALL_EXE=../pyenv/bin/python"]
 ---
 
 Here we compare the performance of [`QuantumToolbox.jl`](https://github.com/qutip/QuantumToolbox.jl) with other quantum simulation packages:

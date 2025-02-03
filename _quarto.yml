@@ -29,4 +29,5 @@ format:
     footnotes-hover: true
 
 execute:
-  cache: false
+  cache: true
+  freeze: auto  # re-render only when source changes
