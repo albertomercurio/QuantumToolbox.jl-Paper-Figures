@@ -1,5 +1,8 @@
 project:
   type: website
+  render:
+    - "*.{qmd,jl}"
+    - "!_environment.jl"
 
 website:
   title: "QuantumToolbox.jl Paper Figures"
@@ -10,16 +13,18 @@ website:
         text: Home
       - text: "QuantumToolbox.jl"
         menu:
-          - text: Introduction
-            href: src/introduction.qmd
+          # - text: Introduction
+          #   href: src/introduction.qmd
           - text: Time Evolution
-            href: src/time_evolution.qmd
+            href: src/time_evolution.jl
           - text: Comparison with other packages
-            href: src/benchmarks.qmd
+            href: src/benchmarks.jl
       - about.qmd
     tools:
       - icon: github
         href:  https://github.com/albertomercurio/QuantumToolbox.jl-Paper-Figures
+
+bibliography: bibliography.bib
 
 format:
   html:

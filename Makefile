@@ -2,14 +2,13 @@
 
 # Variables
 PYENV:=pyenv/bin/activate
-ENV_VARS:=_environment
 
 # Default target
 all: activate publish
 
 # Activate Python environment and load environment variables
 activate:
-	@bash -c "source ${PYENV} && source ${ENV_VARS}"
+	@bash -c "source ${PYENV} && set -a && source ${ENV_VARS} && set +a"
 
 # run Quarto publish command
 publish:
