@@ -14,7 +14,17 @@ To allow reproducibility, this page is generated with [`Quarto`](https://quarto.
 
 ## Importing the Required Packages
 
+Ciao
+
 ```{julia}
+c = ENV["JULIA_PYTHONCALL_EXE"]
+
+# Make it capital
+uppercase(c)
+```
+
+
+<!-- ```{julia}
 import QuantumToolbox
 import QuantumOptics
 using CairoMakie
@@ -28,10 +38,10 @@ jnp = jax.numpy
 dynamiqs = pyimport("dynamiqs")
 
 dynamiqs.set_device("cpu")
-dynamiqs.set_precision("double") # Se the same precision as the others
-```
+dynamiqs.set_precision("double") # Set the same precision as the others
+``` -->
 
-## Master Equation simulation
+<!-- ## Master Equation simulation
 
 Parameters:
 
@@ -231,9 +241,9 @@ axislegend(ax, elements, labels, position = :lt)
 # save("package_comparison.png", fig, px_per_unit = 2.0)
 
 fig
-```
+``` -->
 
----
+<!-- ---
 
 ## System Information
 
@@ -253,4 +263,4 @@ QuantumToolbox.about()
 
 ```{julia}
 qutip.about()
-```
+``` -->

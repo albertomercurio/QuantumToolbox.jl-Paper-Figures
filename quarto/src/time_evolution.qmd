@@ -1,0 +1,12 @@
+---
+title: "Time Evolution solvers: from the Schrödinger equation to the Lindblad master equation and Monte Carlo wave function method"
+author: "Alberto Mercurio"
+
+engine: julia
+---
+
+The Hamiltonian of a quantum system gives us all the information about the system's dynamics. Indeed, 
+
+```{julia}
+Threads.nthreads()
+```

@@ -1,3 +1,4 @@
 pyenv/
 /.quarto/
 /_site/
+/_freeze

@@ -2,7 +2,7 @@ project:
   type: website
 
 website:
-  title: "Lectures"
+  title: "QuantumToolbox.jl Paper Figures"
   navbar:
     search: true
     left:
@@ -11,13 +11,15 @@ website:
       - text: "QuantumToolbox.jl"
         menu:
           - text: Introduction
-            href: QuantumToolbox.jl/introduction.qmd
+            href: src/introduction.qmd
+          - text: Time Evolution
+            href: src/time_evolution.qmd
           - text: Comparison with other packages
-            href: QuantumToolbox.jl/package_comparison.qmd
+            href: src/benchmarks.qmd
       - about.qmd
     tools:
       - icon: github
-        href:  https://github.com/albertomercurio/Lectures
+        href:  https://github.com/albertomercurio/QuantumToolbox.jl-Paper-Figures
 
 format:
   html:
@@ -29,5 +31,5 @@ format:
     footnotes-hover: true
 
 execute:
-  cache: true
-  freeze: auto  # re-render only when source changes
+  cache: false
+  # freeze: false  # re-render only when source changes
