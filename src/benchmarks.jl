@@ -1,21 +1,24 @@
----
-title: "Performance Comparison of Quantum Simulation Packages: Julia vs. Python"
-author: "Alberto Mercurio"
+# %% [markdown]
+# ---
+# title: "Performance Comparison of Quantum Simulation Packages: Julia vs. Python"
+# author: "Alberto Mercurio"
 
-engine: julia
----
+# engine: julia
+# ---
 
-Here we compare the performance of [`QuantumToolbox.jl`](https://github.com/qutip/QuantumToolbox.jl) with other quantum simulation packages:
-- [`QuTiP`](https://github.com/qutip/qutip) (Python)
-- [`dynamiqs`](https://github.com/dynamiqs/dynamiqs) (Python - JAX)
-- [`QuantumOptics.jl`](https://github.com/qojulia/QuantumOptics.jl) (Julia)
+# %% [markdown]
+# Here we compare the performance of [`QuantumToolbox.jl`](https://github.com/qutip/QuantumToolbox.jl) with other quantum simulation packages:
+# - [`QuTiP`](https://github.com/qutip/qutip) (Python)
+# - [`dynamiqs`](https://github.com/dynamiqs/dynamiqs) (Python - JAX)
+# - [`QuantumOptics.jl`](https://github.com/qojulia/QuantumOptics.jl) (Julia)
 
-To allow reproducibility, this page is generated with [`Quarto`](https://quarto.org) based on [this repository](https://github.com/albertomercurio/QuantumToolbox-Benchmarks). Moreover, to keep the code clean, we use the [`PythonCall.jl`](https://github.com/JuliaPy/PythonCall.jl) package to call Python code from Julia. We tested that the overhead of calling Python code from Julia is negligible for the purpose of this benchmark.
+# To allow reproducibility, this page is generated with [`Quarto`](https://quarto.org) based on [this repository](https://github.com/albertomercurio/QuantumToolbox-Benchmarks). Moreover, to keep the code clean, we use the [`PythonCall.jl`](https://github.com/JuliaPy/PythonCall.jl) package to call Python code from Julia. We tested that the overhead of calling Python code from Julia is negligible for the purpose of this benchmark.
 
-## Importing the Required Packages
+# ## Importing the Required Packages
 
+# %%
+include("_environment.jl")
 
-```{julia}
 import QuantumToolbox
 import QuantumOptics
 using CairoMakie
@@ -30,23 +33,23 @@ dynamiqs = pyimport("dynamiqs")
 
 dynamiqs.set_device("cpu")
 dynamiqs.set_precision("double") # Set the same precision as the others
-```
 
-## Master Equation simulation
+# %% [markdown]
+# ## Master Equation simulation
 
-Parameters:
+# Parameters:
 
-```{julia}
+# %%
 N = 50
 Δ = 0.1
 F = 2
 γ = 1
 nth = 0.8
-```
 
-### QuantumToolbox.jl
+# %% [markdown]
+# ### QuantumToolbox.jl
 
-```{julia}
+# %%
 a = QuantumToolbox.destroy(N)
 H = Δ * a' * a + F * (a + a')
 c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
@@ -57,11 +60,12 @@ tlist = range(0, 10, 100)
 QuantumToolbox.mesolve(H, ψ0, tlist, c_ops, progress_bar = Val(false)).states[2] # Warm-up
 
 mesolve_quantumtoolbox = @benchmark QuantumToolbox.mesolve($H, $ψ0, $tlist, $c_ops, progress_bar = Val(false)).states[2]
-```
 
-### QuTiP
 
-```{julia}
+# %% [markdown]
+# ### QuTiP
+
+# %%
 a = qutip.destroy(N)
 H = Δ * a.dag() * a + F * (a + a.dag())
 c_ops = pylist([np.sqrt(γ * (1 + nth)) * a, np.sqrt(γ * nth) * a.dag()])
@@ -72,11 +76,11 @@ tlist = np.linspace(0, 10, 100)
 qutip.mesolve(H, ψ0, tlist, c_ops).states[1] # Warm-up
 
 mesolve_qutip = @benchmark qutip.mesolve($H, $ψ0, $tlist, $c_ops).states[1]
-```
 
-### dynamiqs
+# %% [markdown]
+# ### dynamiqs
 
-```{julia}
+# %%
 a = dynamiqs.destroy(N)
 H = Δ * jnp.matmul(dynamiqs.dag(a), a) + F * (a + dynamiqs.dag(a))
 c_ops = [jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * nth) * dynamiqs.dag(a)]
@@ -88,11 +92,11 @@ dynamiqs.mesolve(H, c_ops, ψ0, tlist, options = dynamiqs.Options(progress_meter
 
 mesolve_dynamiqs =
     @benchmark dynamiqs.mesolve($H, $c_ops, $ψ0, $tlist, options = dynamiqs.Options(progress_meter = nothing)).states
-```
 
-### QuantumOptics.jl
+# %% [markdown]
+# ### QuantumOptics.jl
 
-```{julia}
+# %%
 bas = QuantumOptics.FockBasis(N)
 a = QuantumOptics.destroy(bas)
 
@@ -105,24 +109,24 @@ tlist = range(0, 10, 100)
 QuantumOptics.timeevolution.master(tlist, ψ0, H, c_ops)[2][2]
 
 mesolve_quantumoptics = @benchmark QuantumOptics.timeevolution.master($tlist, $ψ0, $H, $c_ops)
-```
 
-## Monte Carlo quantum trajectories simulation
+# %% [markdown]
+# ## Monte Carlo quantum trajectories simulation
 
-Parameters:
+# Parameters:
 
-```{julia}
+# %%
 N = 50
 Δ = 0.1
 F = 2
 γ = 1
 nth = 0.8
 ntraj = 100
-```
 
-### QuantumToolbox.jl
+# %% [markdown]
+# ### QuantumToolbox.jl
 
-```{julia}
+# %%
 a = QuantumToolbox.destroy(N)
 H = Δ * a' * a + F * (a + a')
 c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
@@ -134,11 +138,11 @@ QuantumToolbox.mcsolve(H, ψ0, tlist, c_ops, progress_bar = Val(false), ntraj = 
 
 mcsolve_quantumtoolbox =
     @benchmark QuantumToolbox.mcsolve($H, $ψ0, $tlist, $c_ops, progress_bar = Val(false), ntraj = ntraj).states[2]
-```
 
-### QuTiP
+# %% [markdown]
+# ### QuTiP
 
-```{julia}
+# %%
 a = qutip.destroy(N)
 H = Δ * a.dag() * a + F * (a + a.dag())
 c_ops = pylist([np.sqrt(γ * (1 + nth)) * a, np.sqrt(γ * nth) * a.dag()])
@@ -163,13 +167,14 @@ mcsolve_qutip = @benchmark qutip.mcsolve(
     ntraj = ntraj,
     options = pydict(Dict("progress_bar" => false, "map" => "parallel", "num_cpus" => Threads.nthreads())),
 ).states[1]
-```
 
-### dynamiqs (not yet implemented)
+# %% [markdown]
+# ### dynamiqs (not yet implemented)
 
-### QuantumOptics.jl
+# %% [markdown]
+# ### QuantumOptics.jl
 
-```{julia}
+# %%
 bas = QuantumOptics.FockBasis(N)
 a = QuantumOptics.destroy(bas)
 
@@ -188,11 +193,11 @@ end
 quantumoptics_mcwf(tlist, ψ0, H, c_ops, ntraj) # Warm-up
 
 mesolve_quantumoptics = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, ntraj)
-```
 
-## Plotting the Results
+# %% [markdown]
+# ## Plotting the Results
 
-```{julia}
+# %%
 mesolve_times = [
     1e-6 * sum(m.times) / length(m.times) for
     m in [mesolve_quantumtoolbox, mesolve_qutip, mesolve_dynamiqs, mesolve_quantumoptics]
@@ -229,27 +234,24 @@ elements = [PolyElement(polycolor = colors[i]) for i in 1:length(labels)]
 
 axislegend(ax, elements, labels, position = :lt)
 
-# save("package_comparison.png", fig, px_per_unit = 2.0)
+save("../figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
 fig
-```
 
-## System Information
+# %% [markdown]
+# ## System Information
 
-```{julia}
-using InteractiveUtils
-
+# %%
 versioninfo()
-```
 
----
+# %% [markdown]
+# ---
 
-```{julia}
+# %%
 QuantumToolbox.about()
-```
 
----
+# %% [markdown]
+# ---
 
-```{julia}
+# %%
 qutip.about()
-```
