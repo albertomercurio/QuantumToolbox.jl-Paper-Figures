@@ -6,7 +6,6 @@
 # engine: julia
 # ---
 
-# %% [markdown]
 # Here we compare the performance of [`QuantumToolbox.jl`](https://github.com/qutip/QuantumToolbox.jl) with other quantum simulation packages:
 # - [`QuTiP`](https://github.com/qutip/qutip) (Python)
 # - [`dynamiqs`](https://github.com/dynamiqs/dynamiqs) (Python - JAX)
@@ -17,22 +16,13 @@
 # ## Importing the Required Packages
 
 # %%
-include("_environment.jl")
-
 import QuantumToolbox
 import QuantumOptics
+using StochasticDiffEq
 using CairoMakie
-using PythonCall
 using BenchmarkTools
 
-np = pyimport("numpy")
-qutip = pyimport("qutip")
-jax = pyimport("jax")
-jnp = jax.numpy
-dynamiqs = pyimport("dynamiqs")
-
-dynamiqs.set_device("cpu")
-dynamiqs.set_precision("double") # Set the same precision as the others
+include("_cairomakie_setup.jl")
 
 # %% [markdown]
 # ## Master Equation simulation
@@ -57,41 +47,10 @@ c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 tlist = range(0, 10, 100)
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.mesolve(H, ψ0, tlist, c_ops, progress_bar = Val(false)).states[2] # Warm-up
+QuantumToolbox.mesolve(H, ψ0, tlist, c_ops, progress_bar=Val(false)).states[2] # Warm-up
 
-mesolve_quantumtoolbox = @benchmark QuantumToolbox.mesolve($H, $ψ0, $tlist, $c_ops, progress_bar = Val(false)).states[2]
+mesolve_quantumtoolbox = @benchmark QuantumToolbox.mesolve($H, $ψ0, $tlist, $c_ops, progress_bar=Val(false)).states[2]
 
-
-# %% [markdown]
-# ### QuTiP
-
-# %%
-a = qutip.destroy(N)
-H = Δ * a.dag() * a + F * (a + a.dag())
-c_ops = pylist([np.sqrt(γ * (1 + nth)) * a, np.sqrt(γ * nth) * a.dag()])
-
-tlist = np.linspace(0, 10, 100)
-ψ0 = qutip.fock(N, 0)
-
-qutip.mesolve(H, ψ0, tlist, c_ops).states[1] # Warm-up
-
-mesolve_qutip = @benchmark qutip.mesolve($H, $ψ0, $tlist, $c_ops).states[1]
-
-# %% [markdown]
-# ### dynamiqs
-
-# %%
-a = dynamiqs.destroy(N)
-H = Δ * jnp.matmul(dynamiqs.dag(a), a) + F * (a + dynamiqs.dag(a))
-c_ops = [jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * nth) * dynamiqs.dag(a)]
-
-tlist = jnp.linspace(0, 10, 100)
-ψ0 = dynamiqs.fock(N, 0)
-
-dynamiqs.mesolve(H, c_ops, ψ0, tlist, options = dynamiqs.Options(progress_meter = nothing)).states # Warm-up
-
-mesolve_dynamiqs =
-    @benchmark dynamiqs.mesolve($H, $c_ops, $ψ0, $tlist, options = dynamiqs.Options(progress_meter = nothing)).states
 
 # %% [markdown]
 # ### QuantumOptics.jl
@@ -134,42 +93,11 @@ c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 tlist = range(0, 10, 100)
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.mcsolve(H, ψ0, tlist, c_ops, progress_bar = Val(false), ntraj = ntraj).states[2] # Warm-up
+QuantumToolbox.mcsolve(H, ψ0, tlist, c_ops, progress_bar=Val(false), ntraj=ntraj).states[2] # Warm-up
 
 mcsolve_quantumtoolbox =
-    @benchmark QuantumToolbox.mcsolve($H, $ψ0, $tlist, $c_ops, progress_bar = Val(false), ntraj = ntraj).states[2]
+    @benchmark QuantumToolbox.mcsolve($H, $ψ0, $tlist, $c_ops, progress_bar=Val(false), ntraj=ntraj).states[2]
 
-# %% [markdown]
-# ### QuTiP
-
-# %%
-a = qutip.destroy(N)
-H = Δ * a.dag() * a + F * (a + a.dag())
-c_ops = pylist([np.sqrt(γ * (1 + nth)) * a, np.sqrt(γ * nth) * a.dag()])
-
-tlist = np.linspace(0, 10, 100)
-ψ0 = qutip.fock(N, 0)
-
-qutip.mcsolve(
-    H,
-    ψ0,
-    tlist,
-    c_ops,
-    ntraj = ntraj,
-    options = pydict(Dict("progress_bar" => false, "map" => "parallel", "num_cpus" => Threads.nthreads())),
-).states[1] # Warm-up
-
-mcsolve_qutip = @benchmark qutip.mcsolve(
-    $H,
-    $ψ0,
-    $tlist,
-    $c_ops,
-    ntraj = ntraj,
-    options = pydict(Dict("progress_bar" => false, "map" => "parallel", "num_cpus" => Threads.nthreads())),
-).states[1]
-
-# %% [markdown]
-# ### dynamiqs (not yet implemented)
 
 # %% [markdown]
 # ### QuantumOptics.jl
@@ -186,55 +114,154 @@ tlist = range(0, 10, 100)
 
 function quantumoptics_mcwf(tlist, ψ0, H, c_ops, ntraj)
     Threads.@threads for i in 1:ntraj
-        QuantumOptics.timeevolution.mcwf(tlist, ψ0, H, c_ops, display_beforeevent = true, display_afterevent = true)[2][2]
+        QuantumOptics.timeevolution.mcwf(tlist, ψ0, H, c_ops, display_beforeevent=true, display_afterevent=true)[2][2]
     end
 end
 
 quantumoptics_mcwf(tlist, ψ0, H, c_ops, ntraj) # Warm-up
 
-mesolve_quantumoptics = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, ntraj)
+mcsolve_quantumoptics = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, ntraj)
+
+# %% [markdown]
+
+# ## Stochastic Schrödinger Equation simulation
+
+# Parameters:
+
+# %%
+sse_dt = 1e-3
+
+# %% [markdown]
+
+# ### QuantumToolbox.jl
+
+# %%
+a = QuantumToolbox.destroy(N)
+H = Δ * a' * a + F * (a + a')
+sc_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+
+tlist = range(0, 10, 100)
+ψ0 = QuantumToolbox.fock(N, 0)
+
+QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=EM(), dt=sse_dt).states[2] # Warm-up
+
+ssesolve_quantumtoolbox =
+    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=EM(), dt=sse_dt).states[2]
+
+
+# %% [markdown]
+# ### QuantumOptics.jl
+
+# %%
+bas = QuantumOptics.FockBasis(N)
+a = QuantumOptics.destroy(bas)
+
+H = Δ * a' * a + F * (a + a')
+sc_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+
+tlist = range(0, 10, 100)
+ψ0 = QuantumOptics.fockstate(bas, 0)
+
+function quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, dt)
+    fdet_cm, fst_cm = QuantumOptics.stochastic.homodyne_carmichael(H, sc_ops[1], 0)
+    Threads.@threads for i in 1:ntraj
+        QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; normalize_state=true, alg=EM(), dt=dt)[2][2]
+    end
+end
+
+quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, sse_dt) # Warm-up
+
+ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, ntraj, sse_dt)
 
 # %% [markdown]
 # ## Plotting the Results
 
 # %%
+qutip_results = JSON.parsefile("src/python/qutip_benchmark_results.json")
+dynamiqs_results = JSON.parsefile("src/python/dynamiqs_benchmark_results.json")
+
+mesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_mesolve"]),)
+mcsolve_qutip = (times=Vector{Float64}(qutip_results["qutip_mcsolve"]),)
+ssesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_ssesolve"]),)
+
+mesolve_dynamiqs = (times=Vector{Float64}(dynamiqs_results["dynamiqs_mesolve"]),)
+
 mesolve_times = [
     1e-6 * sum(m.times) / length(m.times) for
     m in [mesolve_quantumtoolbox, mesolve_qutip, mesolve_dynamiqs, mesolve_quantumoptics]
 ]
 mcsolve_times =
-    [1e-6 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_qutip, mesolve_quantumoptics]]
+    [1e-6 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_qutip, mcsolve_quantumoptics]]
+ssesolve_times = [
+    1e-6 * sum(m.times) / length(m.times) for
+    m in [ssesolve_quantumtoolbox, ssesolve_qutip, ssesolve_quantumoptics]
+]
 
-fig = Figure(size = (700, 400))
-ax = Axis(
-    fig[1, 1],
-    xticks = (1:2, ["mesolve", "mcsolve"]),
-    ylabel = "Time (ms)",
-    title = "Performance Comparison with Other Packages",
+mesolve_times_x = [1,2,3,4]
+mcsolve_times_x = [1,2,4]
+ssesolve_times_x = [1,2,4]
+
+labels = ["QuantumToolbox.jl", "QuTiP", "dynamiqs", "QuantumOptics.jl"]
+
+# %%
+
+fig = Figure(size=(plot_figsize_width_pt, plot_figsize_width_pt*0.4))
+
+Label(fig[1, 1:3], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center)
+
+ax_mesolve = Axis(
+    fig[2, 1],
+    ylabel="Time (ms)",
+    title="mesolve",
+    xticks = (mesolve_times_x, labels[mesolve_times_x]),
+    xticklabelrotation = π/4,
+)
+ax_mcsolve = Axis(
+    fig[2, 2],
+    title="mcsolve",
+    xticks = (mcsolve_times_x, labels[mcsolve_times_x]),
+    xticklabelrotation = π/4,
+)
+ax_ssesolve = Axis(
+    fig[2, 3],
+    title="ssesolve",
+    xticks = (ssesolve_times_x, labels[ssesolve_times_x]),
+    xticklabelrotation = π/4,
 )
 
 colors = Makie.wong_colors()
 
 barplot!(
-    ax,
-    ones(length(mesolve_times)),
+    ax_mesolve,
+    mesolve_times_x,
     mesolve_times,
-    dodge = 1:length(mesolve_times),
-    color = colors[1:length(mesolve_times)],
+    # dodge = 1:length(mesolve_times),
+    color=colors[mesolve_times_x]
 )
 
-barplot!(ax, 2 * ones(length(mcsolve_times)), mcsolve_times, dodge = 1:length(mcsolve_times), color = colors[[1, 2, 4]])
+barplot!(ax_mcsolve,
+    mcsolve_times_x,
+    mcsolve_times,
+    # dodge=1:length(mcsolve_times), 
+    color=colors[mcsolve_times_x]
+)
 
-ylims!(ax, 0, nothing)
+barplot!(ax_ssesolve,
+    ssesolve_times_x,
+    ssesolve_times,
+    # dodge=1:length(ssesolve_times), 
+    color=colors[ssesolve_times_x]
+)
 
-# Legend
+ylims!(ax_mesolve, 0, nothing)
+ylims!(ax_mcsolve, 0, nothing)
+ylims!(ax_ssesolve, 0, nothing)
 
-labels = ["QuantumToolbox.jl", "QuTiP", "dynamiqs", "QuantumOptics.jl"]
-elements = [PolyElement(polycolor = colors[i]) for i in 1:length(labels)]
+rowgap!(fig.layout, 2)
 
-axislegend(ax, elements, labels, position = :lt)
+# save("figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
-save("../figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
+save("figures/benchmarks.svg", fig, pt_per_unit = 10.0)
 
 fig
 
