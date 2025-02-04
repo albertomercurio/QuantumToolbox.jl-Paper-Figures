@@ -261,7 +261,7 @@ rowgap!(fig.layout, 2)
 
 # save("figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
-save("figures/benchmarks.svg", fig, pt_per_unit = 10.0)
+save("figures/benchmarks.svg", fig, pt_per_unit = 1.0)
 
 fig
 
