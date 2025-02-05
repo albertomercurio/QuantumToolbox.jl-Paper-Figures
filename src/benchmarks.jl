@@ -21,6 +21,7 @@ import QuantumOptics
 using StochasticDiffEq
 using CairoMakie
 using BenchmarkTools
+using JSON
 
 include("_cairomakie_setup.jl")
 
@@ -67,7 +68,7 @@ tlist = range(0, 10, 100)
 
 QuantumOptics.timeevolution.master(tlist, ψ0, H, c_ops)[2][2]
 
-mesolve_quantumoptics = @benchmark QuantumOptics.timeevolution.master($tlist, $ψ0, $H, $c_ops)
+mesolve_quantumoptics = @benchmark QuantumOptics.timeevolution.master($tlist, $ψ0, $H, $c_ops, abstol=1e-8, reltol=1e-6)
 
 # %% [markdown]
 # ## Monte Carlo quantum trajectories simulation
@@ -114,7 +115,7 @@ tlist = range(0, 10, 100)
 
 function quantumoptics_mcwf(tlist, ψ0, H, c_ops, ntraj)
     Threads.@threads for i in 1:ntraj
-        QuantumOptics.timeevolution.mcwf(tlist, ψ0, H, c_ops, display_beforeevent=true, display_afterevent=true)[2][2]
+        QuantumOptics.timeevolution.mcwf(tlist, ψ0, H, c_ops, display_beforeevent=true, display_afterevent=true, abstol=1e-8, reltol=1e-6)[2][2]
     end
 end
 
@@ -165,7 +166,7 @@ tlist = range(0, 10, 100)
 function quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, dt)
     fdet_cm, fst_cm = QuantumOptics.stochastic.homodyne_carmichael(H, sc_ops[1], 0)
     Threads.@threads for i in 1:ntraj
-        QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; normalize_state=true, alg=EM(), dt=dt)[2][2]
+        QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; normalize_state=true, alg=EM(), dt=dt, abstol=1e-2, reltol=1e-2)[2][2]
     end
 end
 
@@ -259,9 +260,11 @@ ylims!(ax_ssesolve, 0, nothing)
 
 rowgap!(fig.layout, 2)
 
+# For the LaTeX document
 # save("figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
-save("figures/benchmarks.svg", fig, pt_per_unit = 1.0)
+# For the README file in the GitHub repository
+save("figures/benchmarks.svg", fig, pt_per_unit = 2.0)
 
 fig
 
