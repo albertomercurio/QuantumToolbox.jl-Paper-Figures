@@ -59,7 +59,13 @@ def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 
     solver = dynamiqs.solver.EulerMaruyama(dt=stoc_dt)
 
-    dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, solver=solver, options=dynamiqs.Options(progress_meter=None)).states # Warm-up
+    sol_sse = dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=dynamiqs.Options(progress_meter=None)) # Warm-up
+    sol_me = dynamiqs.mesolve(H, sc_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=dynamiqs.Options(progress_meter=None))
+    # Test if the two methods give the same result up to sol tolerance
+    expect_sse = jnp.sum(sol_sse.expects, axis=0)[0,:] / ntraj
+    convergence_metric = jnp.sum(jnp.abs(expect_sse - sol_me.expects[0,:])) / len(tlist)
+    print(f"ssesolve convergenge check. {convergence_metric} should be smaller than 0.1")
+    assert jnp.allclose(expect_sse, sol_me.expects[0,:], atol=1e-1 * len(tlist))
 
     # Define the statement to benchmark
     def solve():
@@ -70,11 +76,11 @@ def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 
     return [t * 1e9 for t in times]  # List of times in nanoseconds
 
-def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, eta_sme=0.7, num_repeats=100):
+def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     a = dynamiqs.destroy(N)
     H = Δ * a.dag() @ a - U/2 * a.dag() @ a.dag() @ a @ a + F * (a + a.dag())
-    sc_ops = [jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * nth) * a.dag()]
-    etas = [eta_sme, 0, 0]
+    sc_ops = [jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * nth) * a.dag()]
+    etas = [1, 0]
 
     tlist = jnp.arange(0, 10, stoc_dt*20)
     ψ0 = dynamiqs.fock(N, 0)
@@ -85,7 +91,13 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, eta_sme=0.7, num_repeats=100):
 
     solver = dynamiqs.solver.EulerMaruyama(dt=stoc_dt)
 
-    dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, solver=solver).states # Warm-up
+    sol_sme = dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver) # Warm-up
+    sol_me = dynamiqs.mesolve(H, [sc_ops[0], sc_ops[1]], ψ0, tlist, exp_ops=[a.dag() @ a])
+    # Test if the two methods give the same result up to sol tolerance
+    expect_sme = jnp.sum(sol_sme.expects, axis=0)[0,:] / ntraj
+    convergence_metric = jnp.sum(jnp.abs(expect_sme - sol_me.expects[0,:])) / len(tlist)
+    print(f"smesolve convergenge check. {convergence_metric} should be smaller than 0.1")
+    assert jnp.allclose(expect_sme, sol_me.expects[0,:], atol=1e-1 * len(tlist))
 
     # Define the statement to benchmark
     def solve():

@@ -9,12 +9,17 @@ qutip-benchmark:
 dynamiqs-benchmark:
 	bash -c "source $(PYENV) && python src/python/dynamiqs_benchmarks.py"
 
-# Default target
-all: publish
+render:
+	quarto render
 
 # run Quarto publish command
 publish:
 	quarto publish gh-pages --no-browser
+
+# Default target
+all-render: qutip-benchmark dynamiqs-benchmark render
+
+all-publish: qutip-benchmark dynamiqs-benchmark render publish
 
 # Help target
 help:

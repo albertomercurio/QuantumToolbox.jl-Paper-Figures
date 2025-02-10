@@ -39,7 +39,7 @@ F = 2 # Amplitude of the drive
 nth = 0.2
 ntraj = 100
 stoc_dt = 1e-3
-stoc_alg_quantumtoolbox = EM()
+stoc_alg_quantumtoolbox = SRA2()
 stoc_alg_quantumoptics = EM()
 
 # %% [markdown]
@@ -126,12 +126,17 @@ mcsolve_quantumoptics = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, 
 # %%
 a = QuantumToolbox.destroy(N)
 H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
-sc_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+sc_ops = [sqrt(γ * (1 + nth)) * a]
 
 tlist = 0:stoc_dt*20:10 # We use this because dynamiqs only supports tsave to be multiple of dt
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2] # Warm-up
+sol_qt_sse = QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops, e_ops=[a'*a], progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, dt=stoc_dt) # Warm-up
+
+sol_qt_me = QuantumToolbox.mesolve(H, ψ0, tlist, sc_ops, e_ops=[a'*a], progress_bar=Val(false))
+
+converged = sum(abs, vec(sol_qt_sse.expect) .- vec(sol_qt_me.expect)) ./ length(sol_qt_sse.expect)
+converged < 1e-1 || error("ssesolve and mesolve results do not match")
 
 ssesolve_quantumtoolbox =
     @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2]
@@ -152,12 +157,18 @@ tlist = 0:stoc_dt*20:10
 
 function quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, alg, dt)
     fdet_cm, fst_cm = QuantumOptics.stochastic.homodyne_carmichael(H, sc_ops[1], 0)
+    expect_result = zeros(ComplexF64, length(tlist), ntraj)
     Threads.@threads for i in 1:ntraj
-        QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; normalize_state=true, alg=alg, dt=dt, abstol=1e-2, reltol=1e-2)[2][2]
+        states = QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; normalize_state=true, alg=alg, dt=dt, abstol=1e-2, reltol=1e-2)[2]
+        expect_result[:, i] .= QuantumOptics.expect.(Ref(a'*a), states)
     end
+    return dropdims(sum(expect_result, dims=2), dims=2) ./ ntraj
 end
 
-quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
+expect_qo_sse = quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
+
+converged = sum(abs, expect_qo_sse .- vec(sol_qt_me.expect)) ./ length(expect_qo_sse)
+converged < 1e-1 || error("ssesolve and mesolve results do not match")
 
 ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt)
 
@@ -175,9 +186,13 @@ sc_ops = [sqrt(γ * (1 + nth)) * a]
 tlist = 0:stoc_dt*20:10
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.smesolve(H, ψ0, tlist, c_ops, sc_ops, ntraj=ntraj, progress_bar=Val(false), tstops=tlist, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2] # Warm-up
+sol_qt_sme = QuantumToolbox.smesolve(H, ψ0, tlist, c_ops, sc_ops, e_ops=[a'*a], ntraj=ntraj, progress_bar=Val(false), tstops=tlist, alg=stoc_alg_quantumtoolbox) # Warm-up
+sol_qt_me = QuantumToolbox.mesolve(H, ψ0, tlist, vcat(c_ops, sc_ops), e_ops=[a'*a], progress_bar=Val(false))
 
-smesolve_quantumtoolbox = @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $sc_ops, ntraj=$ntraj, progress_bar=Val(false), tstops=$tlist, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2]
+converged = sum(abs, vec(sol_qt_sme.expect) .- vec(sol_qt_me.expect)) ./ length(sol_qt_sme.expect)
+converged < 1e-1 || error("smesolve and mesolve results do not match")
+
+smesolve_quantumtoolbox = @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $sc_ops, ntraj=$ntraj, progress_bar=Val(false), tstops=$tlist, alg=stoc_alg_quantumtoolbox).states[2]
 
 # %% [markdown]
 # ### QuantumOptics.jl
@@ -194,12 +209,18 @@ tlist = 0:stoc_dt*20:10
 ψ0 = QuantumOptics.fockstate(bas, 0)
 
 function quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, ntraj, alg, dt)
+    expect_result = zeros(ComplexF64, length(tlist), ntraj)
     Threads.@threads for i in 1:ntraj
-        QuantumOptics.stochastic.master(tlist, ψ0, H, c_ops, sc_ops; alg=alg, dt=dt)[2][2]
+        states = QuantumOptics.stochastic.master(tlist, ψ0, H, c_ops, sc_ops; alg=alg, dt=dt)[2]
+        expect_result[:, i] .= QuantumOptics.expect.(Ref(a'*a), states)
     end
+    return dropdims(sum(expect_result, dims=2), dims=2) ./ ntraj
 end
 
-quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
+expec_qo_sme = quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
+
+converged = sum(abs, expec_qo_sme .- vec(sol_qt_me.expect)) ./ length(expec_qo_sme)
+converged < 1e-1 || error("smesolve and mesolve results do not match")
 
 smesolve_quantumoptics = @benchmark quantumoptics_smesolve($tlist, $ψ0, $H, $c_ops, $sc_ops, $ntraj, $stoc_alg_quantumoptics, $stoc_dt)
 
@@ -219,17 +240,17 @@ mesolve_dynamiqs = (times=Vector{Float64}(dynamiqs_results["dynamiqs_mesolve"]),
 smesolve_dynamiqs = (times=Vector{Float64}(dynamiqs_results["dynamiqs_smesolve"]),)
 
 mesolve_times = [
-    1e-6 * sum(m.times) / length(m.times) for
+    1e-9 * sum(m.times) / length(m.times) for
     m in [mesolve_quantumtoolbox, mesolve_quantumoptics, mesolve_qutip, mesolve_dynamiqs]
 ]
 mcsolve_times =
-    [1e-6 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_quantumoptics, mcsolve_qutip]]
+    [1e-9 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_quantumoptics, mcsolve_qutip]]
 ssesolve_times = [
-    1e-6 * sum(m.times) / length(m.times) for
+    1e-9 * sum(m.times) / length(m.times) for
     m in [ssesolve_quantumtoolbox, ssesolve_quantumoptics, ssesolve_qutip]
 ]
 smesolve_times = [
-    1e-6 * sum(m.times) / length(m.times) for
+    1e-9 * sum(m.times) / length(m.times) for
     m in [smesolve_quantumtoolbox, smesolve_quantumoptics, smesolve_qutip, smesolve_dynamiqs]
 ]
 
@@ -244,26 +265,26 @@ labels = ["QuantumToolbox.jl", "QuantumOptics.jl", "QuTiP", "dynamiqs"]
 
 fig = Figure(size=(plot_figsize_width_pt, plot_figsize_width_pt*0.4))
 
-Label(fig[1, 1:3], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center)
+Label(fig[1, 1:3], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
 
 ax_mesolve = Axis(
     fig[2, 1],
-    ylabel="Time (ms)",
+    ylabel=L"Time ($s$)",
     title="mesolve",
-    xticks = (mesolve_times_x, labels[mesolve_times_x]),
-    xticklabelrotation = π/4,
+    # xticks = (mesolve_times_x, labels[mesolve_times_x]),
+    # xticklabelrotation = π/4,
 )
 ax_mcsolve = Axis(
     fig[2, 2],
     title="mcsolve",
-    xticks = (mcsolve_times_x, labels[mcsolve_times_x]),
-    xticklabelrotation = π/4,
+    # xticks = (mcsolve_times_x, labels[mcsolve_times_x]),
+    # xticklabelrotation = π/4,
 )
 ax_smesolve = Axis(
     fig[2, 3],
     title="smesolve",
-    xticks = (smesolve_times_x, labels[smesolve_times_x]),
-    xticklabelrotation = π/4,
+    # xticks = (smesolve_times_x, labels[smesolve_times_x]),
+    # xticklabelrotation = π/4,
 )
 
 colors = Makie.wong_colors()
@@ -275,6 +296,7 @@ barplot!(
     # dodge = 1:length(mesolve_times),
     color=colors[mesolve_times_x]
 )
+text!(ax_mesolve, 0.02, 0.98, text = "(a)", font = :bold, align = (:left, :top), space = :relative)
 
 barplot!(ax_mcsolve,
     mcsolve_times_x,
@@ -282,6 +304,7 @@ barplot!(ax_mcsolve,
     # dodge=1:length(mcsolve_times), 
     color=colors[mcsolve_times_x]
 )
+text!(ax_mcsolve, 0.02, 0.98, text = "(b)", font = :bold, align = (:left, :top), space = :relative)
 
 barplot!(ax_smesolve,
     smesolve_times_x,
@@ -289,18 +312,27 @@ barplot!(ax_smesolve,
     # dodge=1:length(smesolve_times), 
     color=colors[smesolve_times_x]
 )
+text!(ax_smesolve, 0.02, 0.98, text = "(c)", font = :bold, align = (:left, :top), space = :relative)
+
+elements = [PolyElement(polycolor = colors[i]) for i in 1:length(labels)]
+Legend(fig[3, 1:3], elements, labels, orientation=:horizontal)
 
 ylims!(ax_mesolve, 0, nothing)
 ylims!(ax_mcsolve, 0, nothing)
 ylims!(ax_smesolve, 0, nothing)
 
-rowgap!(fig.layout, 2)
+hidexdecorations!(ax_mesolve)
+hidexdecorations!(ax_mcsolve)
+hidexdecorations!(ax_smesolve)
+
+rowgap!(fig.layout, 5)
+
 
 # For the LaTeX document
-# save("figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
+save("../figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
 # For the README file in the GitHub repository
-# save("figures/benchmarks.svg", fig, pt_per_unit = 2.0)
+save("../figures/benchmarks.svg", fig, pt_per_unit = 2.0)
 
 fig
 
