@@ -31,11 +31,14 @@ include("_cairomakie_setup.jl")
 # Parameters:
 
 # %%
-N = 50
-Δ = 0.1
-F = 2
-γ = 1
+N = 50 # Dimension of the Hilbert space
+Δ = 0.1 # Detuning with respect to the drive
+U = -0.05 # Nonlinearity
+F = 2 # Amplitude of the drive
+γ = 1 # Decay rate
 nth = 0.8
+ntraj = 100
+stoc_dt = 1e-3
 
 # %% [markdown]
 # ### QuantumToolbox.jl
@@ -73,17 +76,6 @@ mesolve_quantumoptics = @benchmark QuantumOptics.timeevolution.master($tlist, $�
 # %% [markdown]
 # ## Monte Carlo quantum trajectories simulation
 
-# Parameters:
-
-# %%
-N = 50
-Δ = 0.1
-F = 2
-γ = 1
-nth = 0.8
-ntraj = 100
-
-# %% [markdown]
 # ### QuantumToolbox.jl
 
 # %%
@@ -127,13 +119,6 @@ mcsolve_quantumoptics = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, 
 
 # ## Stochastic Schrödinger Equation simulation
 
-# Parameters:
-
-# %%
-sse_dt = 1e-3
-
-# %% [markdown]
-
 # ### QuantumToolbox.jl
 
 # %%
@@ -144,10 +129,10 @@ sc_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 tlist = range(0, 10, 100)
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=EM(), dt=sse_dt).states[2] # Warm-up
+QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops, progress_bar=Val(false), ntraj=ntraj).states[2] # Warm-up
 
 ssesolve_quantumtoolbox =
-    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=EM(), dt=sse_dt).states[2]
+    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $sc_ops, progress_bar=Val(false), ntraj=ntraj).states[2]
 
 
 # %% [markdown]
@@ -170,16 +155,35 @@ function quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, dt)
     end
 end
 
-quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, sse_dt) # Warm-up
+quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, stoch_dt) # Warm-up
 
-ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, ntraj, sse_dt)
+ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, ntraj, stoch_dt)
+
+# && [markdown]
+# ## Stochastic Master Equation
+
+# ### QuantumToolbox.jl
+
+# %%
+a = QuantumToolbox.destroy(N)
+H = Δ * a' * a + F * (a + a')
+c_ops = [sqrt(γ * nth) * a']
+sc_ops = [sqrt(γ * (1 + nth)) * a]
+
+tlist = range(0, 10, 100)
+ψ0 = QuantumToolbox.fock(N, 0)
+
+QuantumToolbox.smesolve(H, ψ0, tlist, c_ops, sc_ops, progress_bar=Val(false)).states[2] # Warm-up
+
+# smesolve_quantumtoolbox =
+#     @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $sc_ops, progress_bar=Val(false)).states[2]
 
 # %% [markdown]
 # ## Plotting the Results
 
 # %%
-qutip_results = JSON.parsefile("src/python/qutip_benchmark_results.json")
-dynamiqs_results = JSON.parsefile("src/python/dynamiqs_benchmark_results.json")
+qutip_results = JSON.parsefile("python/qutip_benchmark_results.json")
+dynamiqs_results = JSON.parsefile("python/dynamiqs_benchmark_results.json")
 
 mesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_mesolve"]),)
 mcsolve_qutip = (times=Vector{Float64}(qutip_results["qutip_mcsolve"]),)
@@ -264,7 +268,7 @@ rowgap!(fig.layout, 2)
 # save("figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
 # For the README file in the GitHub repository
-save("figures/benchmarks.svg", fig, pt_per_unit = 2.0)
+# save("figures/benchmarks.svg", fig, pt_per_unit = 2.0)
 
 fig
 
