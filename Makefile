@@ -3,6 +3,12 @@
 # Variables
 PYENV:=pyenv/bin/activate
 
+qutip-benchmark:
+	bash -c "source $(PYENV) && python src/python/qutip_benchmarks.py"
+
+dynamiqs-benchmark:
+	bash -c "source $(PYENV) && python src/python/dynamiqs_benchmarks.py"
+
 # Default target
 all: publish
 

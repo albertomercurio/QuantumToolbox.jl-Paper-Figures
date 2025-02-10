@@ -102,12 +102,14 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, eta_sme=0.7, num_repeats=100):
 benchmark_results = {
     "dynamiqs_mesolve": dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100),
     # "dynamiqs_ssesolve": dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=10), Not yet implemented
-    "dynamiqs_smesolve": dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
+    "dynamiqs_smesolve": dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
 }
 
 # %%
 
+print("Saving results to JSON...")
+
 # Save results to JSON
-with open("dynamiqs_benchmark_results.json", "w") as f:
+with open("src/python/dynamiqs_benchmark_results.json", "w") as f:
     json.dump(benchmark_results, f, indent=4)
 # %%

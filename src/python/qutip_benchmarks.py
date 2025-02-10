@@ -92,7 +92,11 @@ def qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
         tlist,
         sc_ops,
         ntraj=ntraj,
-        options={"progress_bar": False, "map": "parallel", "num_cpus": num_threads},
+        options={"progress_bar": False, 
+                     "map": "parallel", 
+                     "num_cpus": num_threads,
+                     "method": "euler",
+                     "dt": stoc_dt,},
     ).states[1] # Warm-up
 
     # Define the statement to benchmark
@@ -103,7 +107,11 @@ def qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
             tlist,
             sc_ops,
             ntraj=ntraj,
-            options={"progress_bar": False, "map": "parallel", "num_cpus": num_threads},
+            options={"progress_bar": False, 
+                     "map": "parallel", 
+                     "num_cpus": num_threads,
+                     "method": "euler",
+                     "dt": stoc_dt,},
         ).states[1]
     
     # Run the benchmark using timeit
@@ -128,7 +136,11 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
         c_ops,
         sc_ops,
         ntraj=ntraj,
-        options={"progress_bar": False, "map": "parallel", "num_cpus": num_threads},
+        options={"progress_bar": False, 
+                     "map": "parallel", 
+                     "num_cpus": num_threads,
+                     "method": "euler",
+                     "dt": stoc_dt,},
     ).states[1] # Warm-up
 
     # Define the statement to benchmark
@@ -140,7 +152,11 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
             c_ops,
             sc_ops,
             ntraj=ntraj,
-            options={"progress_bar": False, "map": "parallel", "num_cpus": num_threads},
+            options={"progress_bar": False, 
+                     "map": "parallel", 
+                     "num_cpus": num_threads,
+                     "method": "euler",
+                     "dt": stoc_dt,},
         ).states[1]
     
     # Run the benchmark using timeit
@@ -154,12 +170,14 @@ benchmark_results = {
     "qutip_mesolve": qutip_mesolve(N, Δ, F, γ, nth, num_repeats=100),
     "qutip_mcsolve": qutip_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
     "qutip_ssesolve": qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
-    "qutip_smesolve": qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
+    "qutip_smesolve": qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
 }
 
 # %%
 
+print("Saving results to JSON...")
+
 # Save results to JSON
-with open("qutip_benchmark_results.json", "w") as f:
+with open("src/python/qutip_benchmark_results.json", "w") as f:
     json.dump(benchmark_results, f, indent=4)
 # %%
