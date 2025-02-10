@@ -36,16 +36,18 @@ N = 50 # Dimension of the Hilbert space
 U = -0.05 # Nonlinearity
 F = 2 # Amplitude of the drive
 γ = 1 # Decay rate
-nth = 0.8
+nth = 0.2
 ntraj = 100
 stoc_dt = 1e-3
+stoc_alg_quantumtoolbox = EM()
+stoc_alg_quantumoptics = EM()
 
 # %% [markdown]
 # ### QuantumToolbox.jl
 
 # %%
 a = QuantumToolbox.destroy(N)
-H = Δ * a' * a + F * (a + a')
+H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
 c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 
 tlist = range(0, 10, 100)
@@ -63,7 +65,7 @@ mesolve_quantumtoolbox = @benchmark QuantumToolbox.mesolve($H, $ψ0, $tlist, $c_
 bas = QuantumOptics.FockBasis(N)
 a = QuantumOptics.destroy(bas)
 
-H = Δ * a' * a + F * (a + a')
+H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
 c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 
 tlist = range(0, 10, 100)
@@ -80,7 +82,7 @@ mesolve_quantumoptics = @benchmark QuantumOptics.timeevolution.master($tlist, $�
 
 # %%
 a = QuantumToolbox.destroy(N)
-H = Δ * a' * a + F * (a + a')
+H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
 c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 
 tlist = range(0, 10, 100)
@@ -99,7 +101,7 @@ mcsolve_quantumtoolbox =
 bas = QuantumOptics.FockBasis(N)
 a = QuantumOptics.destroy(bas)
 
-H = Δ * a' * a + F * (a + a')
+H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
 c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 
 tlist = range(0, 10, 100)
@@ -123,16 +125,16 @@ mcsolve_quantumoptics = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, 
 
 # %%
 a = QuantumToolbox.destroy(N)
-H = Δ * a' * a + F * (a + a')
+H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
 sc_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 
-tlist = range(0, 10, 100)
+tlist = 0:stoc_dt*20:10 # We use this because dynamiqs only supports tsave to be multiple of dt
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops, progress_bar=Val(false), ntraj=ntraj).states[2] # Warm-up
+QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2] # Warm-up
 
 ssesolve_quantumtoolbox =
-    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $sc_ops, progress_bar=Val(false), ntraj=ntraj).states[2]
+    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2]
 
 
 # %% [markdown]
@@ -142,22 +144,22 @@ ssesolve_quantumtoolbox =
 bas = QuantumOptics.FockBasis(N)
 a = QuantumOptics.destroy(bas)
 
-H = Δ * a' * a + F * (a + a')
-sc_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
+sc_ops = [sqrt(γ * (1 + nth)) * a]
 
-tlist = range(0, 10, 100)
+tlist = 0:stoc_dt*20:10
 ψ0 = QuantumOptics.fockstate(bas, 0)
 
-function quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, dt)
+function quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, alg, dt)
     fdet_cm, fst_cm = QuantumOptics.stochastic.homodyne_carmichael(H, sc_ops[1], 0)
     Threads.@threads for i in 1:ntraj
-        QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; normalize_state=true, alg=EM(), dt=dt, abstol=1e-2, reltol=1e-2)[2][2]
+        QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; normalize_state=true, alg=alg, dt=dt, abstol=1e-2, reltol=1e-2)[2][2]
     end
 end
 
-quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, stoch_dt) # Warm-up
+quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
 
-ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, ntraj, stoch_dt)
+ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt)
 
 # && [markdown]
 # ## Stochastic Master Equation
@@ -166,17 +168,40 @@ ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc
 
 # %%
 a = QuantumToolbox.destroy(N)
-H = Δ * a' * a + F * (a + a')
+H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
 c_ops = [sqrt(γ * nth) * a']
 sc_ops = [sqrt(γ * (1 + nth)) * a]
 
-tlist = range(0, 10, 100)
+tlist = 0:stoc_dt*20:10
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.smesolve(H, ψ0, tlist, c_ops, sc_ops, progress_bar=Val(false)).states[2] # Warm-up
+QuantumToolbox.smesolve(H, ψ0, tlist, c_ops, sc_ops, ntraj=ntraj, progress_bar=Val(false), tstops=tlist, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2] # Warm-up
 
-# smesolve_quantumtoolbox =
-#     @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $sc_ops, progress_bar=Val(false)).states[2]
+smesolve_quantumtoolbox = @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $sc_ops, ntraj=$ntraj, progress_bar=Val(false), tstops=$tlist, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2]
+
+# %% [markdown]
+# ### QuantumOptics.jl
+
+# %%
+bas = QuantumOptics.FockBasis(N)
+a = QuantumOptics.destroy(bas)
+
+H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
+c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+sc_ops = [sqrt(γ * (1 + nth)) * a]
+
+tlist = 0:stoc_dt*20:10
+ψ0 = QuantumOptics.fockstate(bas, 0)
+
+function quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, ntraj, alg, dt)
+    Threads.@threads for i in 1:ntraj
+        QuantumOptics.stochastic.master(tlist, ψ0, H, c_ops, sc_ops; alg=alg, dt=dt)[2][2]
+    end
+end
+
+quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
+
+smesolve_quantumoptics = @benchmark quantumoptics_smesolve($tlist, $ψ0, $H, $c_ops, $sc_ops, $ntraj, $stoc_alg_quantumoptics, $stoc_dt)
 
 # %% [markdown]
 # ## Plotting the Results
@@ -188,25 +213,32 @@ dynamiqs_results = JSON.parsefile("python/dynamiqs_benchmark_results.json")
 mesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_mesolve"]),)
 mcsolve_qutip = (times=Vector{Float64}(qutip_results["qutip_mcsolve"]),)
 ssesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_ssesolve"]),)
+smesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_smesolve"]),)
 
 mesolve_dynamiqs = (times=Vector{Float64}(dynamiqs_results["dynamiqs_mesolve"]),)
+smesolve_dynamiqs = (times=Vector{Float64}(dynamiqs_results["dynamiqs_smesolve"]),)
 
 mesolve_times = [
     1e-6 * sum(m.times) / length(m.times) for
-    m in [mesolve_quantumtoolbox, mesolve_qutip, mesolve_dynamiqs, mesolve_quantumoptics]
+    m in [mesolve_quantumtoolbox, mesolve_quantumoptics, mesolve_qutip, mesolve_dynamiqs]
 ]
 mcsolve_times =
-    [1e-6 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_qutip, mcsolve_quantumoptics]]
+    [1e-6 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_quantumoptics, mcsolve_qutip]]
 ssesolve_times = [
     1e-6 * sum(m.times) / length(m.times) for
-    m in [ssesolve_quantumtoolbox, ssesolve_qutip, ssesolve_quantumoptics]
+    m in [ssesolve_quantumtoolbox, ssesolve_quantumoptics, ssesolve_qutip]
+]
+smesolve_times = [
+    1e-6 * sum(m.times) / length(m.times) for
+    m in [smesolve_quantumtoolbox, smesolve_quantumoptics, smesolve_qutip, smesolve_dynamiqs]
 ]
 
 mesolve_times_x = [1,2,3,4]
-mcsolve_times_x = [1,2,4]
-ssesolve_times_x = [1,2,4]
+mcsolve_times_x = [1,2,3]
+ssesolve_times_x = [1,2,3]
+smesolve_times_x = [1,2,3,4]
 
-labels = ["QuantumToolbox.jl", "QuTiP", "dynamiqs", "QuantumOptics.jl"]
+labels = ["QuantumToolbox.jl", "QuantumOptics.jl", "QuTiP", "dynamiqs"]
 
 # %%
 
@@ -227,10 +259,10 @@ ax_mcsolve = Axis(
     xticks = (mcsolve_times_x, labels[mcsolve_times_x]),
     xticklabelrotation = π/4,
 )
-ax_ssesolve = Axis(
+ax_smesolve = Axis(
     fig[2, 3],
-    title="ssesolve",
-    xticks = (ssesolve_times_x, labels[ssesolve_times_x]),
+    title="smesolve",
+    xticks = (smesolve_times_x, labels[smesolve_times_x]),
     xticklabelrotation = π/4,
 )
 
@@ -251,16 +283,16 @@ barplot!(ax_mcsolve,
     color=colors[mcsolve_times_x]
 )
 
-barplot!(ax_ssesolve,
-    ssesolve_times_x,
-    ssesolve_times,
-    # dodge=1:length(ssesolve_times), 
-    color=colors[ssesolve_times_x]
+barplot!(ax_smesolve,
+    smesolve_times_x,
+    smesolve_times,
+    # dodge=1:length(smesolve_times), 
+    color=colors[smesolve_times_x]
 )
 
 ylims!(ax_mesolve, 0, nothing)
 ylims!(ax_mcsolve, 0, nothing)
-ylims!(ax_ssesolve, 0, nothing)
+ylims!(ax_smesolve, 0, nothing)
 
 rowgap!(fig.layout, 2)
 

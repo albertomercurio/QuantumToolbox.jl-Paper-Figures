@@ -17,7 +17,7 @@ N = 50 # Dimension of the Hilbert space
 U = -0.05 # Nonlinearity
 F = 2 # Amplitude of the drive
 γ = 1 # Decay rate
-nth = 0.8
+nth = 0.2
 ntraj = 100
 stoc_dt = 1e-3
 
@@ -83,7 +83,7 @@ def qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     H = Δ * a.dag() * a - U/2 * a.dag()**2 * a**2 + F * (a + a.dag())
     sc_ops = [np.sqrt(γ * (1 + nth)) * a]
 
-    tlist = np.linspace(0, 10, 100)
+    tlist = np.arange(0, 10, stoc_dt*20)
     ψ0 = qutip.fock(N, 0)
 
     qutip.ssesolve(
@@ -118,7 +118,7 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     c_ops = [np.sqrt(γ * nth) * a.dag()]
     sc_ops = [np.sqrt(γ * (1 + nth)) * a]
 
-    tlist = np.linspace(0, 10, 100)
+    tlist = np.arange(0, 10, stoc_dt*20)
     ψ0 = qutip.fock(N, 0)
 
     qutip.smesolve(
@@ -153,7 +153,7 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 benchmark_results = {
     "qutip_mesolve": qutip_mesolve(N, Δ, F, γ, nth, num_repeats=100),
     "qutip_mcsolve": qutip_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
-    "qutip_ssesolve": qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100),
+    "qutip_ssesolve": qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
     "qutip_smesolve": qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
 }
 

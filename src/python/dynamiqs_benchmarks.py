@@ -19,7 +19,7 @@ N = 50 # Dimension of the Hilbert space
 U = -0.05 # Nonlinearity
 F = 2 # Amplitude of the drive
 γ = 1 # Decay rate
-nth = 0.8
+nth = 0.2
 ntraj = 100
 stoc_dt = 1e-3
 
@@ -73,8 +73,8 @@ def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, eta_sme=0.7, num_repeats=100):
     a = dynamiqs.destroy(N)
     H = Δ * a.dag() @ a - U/2 * a.dag() @ a.dag() @ a @ a + F * (a + a.dag())
-    sc_ops = [jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * nth) * a.dag()]
-    etas = [eta_sme, 0]
+    sc_ops = [jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * nth) * a.dag()]
+    etas = [eta_sme, 0, 0]
 
     tlist = jnp.arange(0, 10, stoc_dt*20)
     ψ0 = dynamiqs.fock(N, 0)
