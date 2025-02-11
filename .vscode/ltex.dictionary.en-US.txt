@@ -14,3 +14,8 @@ dissipator
 Liouvillian
 superoperator
 Markovian
+optomechanical
+QuantumObjectEvolution
+superoperators
+tridiagonal
+mathbf
