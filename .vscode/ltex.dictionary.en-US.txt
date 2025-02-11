@@ -13,3 +13,4 @@ mathcal
 dissipator
 Liouvillian
 superoperator
+Markovian
