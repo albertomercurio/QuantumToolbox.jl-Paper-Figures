@@ -1,0 +1,15 @@
+Jaynes-Cummings
+rangle
+frac
+dt
+julia
+Mercurio
+Lindblad
+QuantumToolbox
+QuTiP
+DifferentialEquations
+@christopher
+mathcal
+dissipator
+Liouvillian
+superoperator

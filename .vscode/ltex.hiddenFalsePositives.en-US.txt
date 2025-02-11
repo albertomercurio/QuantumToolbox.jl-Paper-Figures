@@ -1,0 +1,3 @@
+{"rule":"DOUBLE_PUNCTUATION","sentence":"^\\Qi\\frac{d}{dt}|\\psi(t)\\rangle = \\hat{H} |\\psi(t)\\rangle \\, ,\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QThis is because the solver uses the most efficient algorithms given by the DifferentialEquations.jl package [@christopher_rackauckas_2024_differentialequations], computing intermediate steps in-place.\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QThis is because the solver uses the most efficient algorithms given by the DifferentialEquations.jl package @christopher_rackauckas_2024_differentialequations, computing intermediate steps in-place.\\E$"}
