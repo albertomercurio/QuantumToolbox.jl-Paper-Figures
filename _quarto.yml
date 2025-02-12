@@ -17,6 +17,8 @@ website:
           #   href: src/introduction.qmd
           - text: Time Evolution
             href: src/time_evolution.jl
+          - text: Dynamical Shifted Fock
+            href: src/dynamical_shifted_fock.jl
           - text: Comparison with other packages
             href: src/benchmarks.jl
       - about.qmd

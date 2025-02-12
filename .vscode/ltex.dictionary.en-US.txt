@@ -19,3 +19,4 @@ QuantumObjectEvolution
 superoperators
 tridiagonal
 mathbf
+DiffEqCallbacks
