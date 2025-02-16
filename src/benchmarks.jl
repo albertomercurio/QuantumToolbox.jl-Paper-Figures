@@ -39,7 +39,7 @@ F = 2 # Amplitude of the drive
 nth = 0.2
 ntraj = 100
 stoc_dt = 1e-3
-stoc_alg_quantumtoolbox = SRA2()
+stoc_alg_quantumtoolbox = SRIW1()
 stoc_alg_quantumoptics = EM()
 
 # %% [markdown]
@@ -131,7 +131,8 @@ sc_ops = [sqrt(γ * (1 + nth)) * a]
 tlist = 0:stoc_dt*20:10 # We use this because dynamiqs only supports tsave to be multiple of dt
 ψ0 = QuantumToolbox.fock(N, 0)
 
-sol_qt_sse = QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops, e_ops=[a'*a], progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, dt=stoc_dt) # Warm-up
+# `sc_ops` not a vector, to use diagonal noise solvers
+sol_qt_sse = QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops[1], e_ops=[a'*a], progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox) # Warm-up
 
 sol_qt_me = QuantumToolbox.mesolve(H, ψ0, tlist, sc_ops, e_ops=[a'*a], progress_bar=Val(false))
 
@@ -139,7 +140,7 @@ converged = sum(abs, vec(sol_qt_sse.expect) .- vec(sol_qt_me.expect)) ./ length(
 converged < 1e-1 || error("ssesolve and mesolve results do not match")
 
 ssesolve_quantumtoolbox =
-    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $sc_ops, progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, dt=stoc_dt).states[2]
+    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $(sc_ops[1]),  progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox).states[2]
 
 
 # %% [markdown]
@@ -155,22 +156,24 @@ sc_ops = [sqrt(γ * (1 + nth)) * a]
 tlist = 0:stoc_dt*20:10
 ψ0 = QuantumOptics.fockstate(bas, 0)
 
-function quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, alg, dt)
+function quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, e_ops, ntraj, alg, dt; f_out = (t, state) -> QuantumOptics.expect(e_ops[1], state))
     fdet_cm, fst_cm = QuantumOptics.stochastic.homodyne_carmichael(H, sc_ops[1], 0)
     expect_result = zeros(ComplexF64, length(tlist), ntraj)
     Threads.@threads for i in 1:ntraj
-        states = QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; normalize_state=true, alg=alg, dt=dt, abstol=1e-2, reltol=1e-2)[2]
-        expect_result[:, i] .= QuantumOptics.expect.(Ref(a'*a), states)
+        expvals = QuantumOptics.stochastic.schroedinger_dynamic(tlist, ψ0, fdet_cm, fst_cm; fout=f_out, noise_processes=1, normalize_state=true, alg=alg, dt=dt, abstol=1e-2, reltol=1e-2)[2]
+        if !isnothing(f_out)
+            expect_result[:, i] .= expvals
+        end
     end
     return dropdims(sum(expect_result, dims=2), dims=2) ./ ntraj
 end
 
-expect_qo_sse = quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
+expect_qo_sse = quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, [a'*a], ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
 
 converged = sum(abs, expect_qo_sse .- vec(sol_qt_me.expect)) ./ length(expect_qo_sse)
 converged < 1e-1 || error("ssesolve and mesolve results do not match")
 
-ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt)
+ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, $([a'*a]), ntraj, stoc_alg_quantumoptics, stoc_dt, f_out=nothing)
 
 # && [markdown]
 # ## Stochastic Master Equation
@@ -186,13 +189,14 @@ sc_ops = [sqrt(γ * (1 + nth)) * a]
 tlist = 0:stoc_dt*20:10
 ψ0 = QuantumToolbox.fock(N, 0)
 
-sol_qt_sme = QuantumToolbox.smesolve(H, ψ0, tlist, c_ops, sc_ops, e_ops=[a'*a], ntraj=ntraj, progress_bar=Val(false), tstops=tlist, alg=stoc_alg_quantumtoolbox) # Warm-up
+# `sc_ops` not a vector, to use diagonal noise solvers
+sol_qt_sme = QuantumToolbox.smesolve(H, ψ0, tlist, c_ops, sc_ops[1], e_ops=[a'*a], ntraj=ntraj, progress_bar=Val(false), alg=stoc_alg_quantumtoolbox) # Warm-up
 sol_qt_me = QuantumToolbox.mesolve(H, ψ0, tlist, vcat(c_ops, sc_ops), e_ops=[a'*a], progress_bar=Val(false))
 
 converged = sum(abs, vec(sol_qt_sme.expect) .- vec(sol_qt_me.expect)) ./ length(sol_qt_sme.expect)
 converged < 1e-1 || error("smesolve and mesolve results do not match")
 
-smesolve_quantumtoolbox = @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $sc_ops, ntraj=$ntraj, progress_bar=Val(false), tstops=$tlist, alg=stoc_alg_quantumtoolbox).states[2]
+smesolve_quantumtoolbox = @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $(sc_ops[1]), ntraj=$ntraj, progress_bar=Val(false), alg=stoc_alg_quantumtoolbox).states[2]
 
 # %% [markdown]
 # ### QuantumOptics.jl
@@ -208,21 +212,23 @@ sc_ops = [sqrt(γ * (1 + nth)) * a]
 tlist = 0:stoc_dt*20:10
 ψ0 = QuantumOptics.fockstate(bas, 0)
 
-function quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, ntraj, alg, dt)
+function quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, e_ops, ntraj, alg, dt; f_out = (t, state) -> QuantumOptics.expect(e_ops[1], state))
     expect_result = zeros(ComplexF64, length(tlist), ntraj)
     Threads.@threads for i in 1:ntraj
-        states = QuantumOptics.stochastic.master(tlist, ψ0, H, c_ops, sc_ops; alg=alg, dt=dt)[2]
-        expect_result[:, i] .= QuantumOptics.expect.(Ref(a'*a), states)
+        expvals = QuantumOptics.stochastic.master(tlist, ψ0, H, c_ops, sc_ops; fout=f_out, alg=alg, dt=dt)[2]
+        if !isnothing(f_out)
+            expect_result[:, i] .= expvals
+        end
     end
     return dropdims(sum(expect_result, dims=2), dims=2) ./ ntraj
 end
 
-expec_qo_sme = quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
+expec_qo_sme = quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, [a'*a], ntraj, stoc_alg_quantumoptics, stoc_dt) # Warm-up
 
 converged = sum(abs, expec_qo_sme .- vec(sol_qt_me.expect)) ./ length(expec_qo_sme)
 converged < 1e-1 || error("smesolve and mesolve results do not match")
 
-smesolve_quantumoptics = @benchmark quantumoptics_smesolve($tlist, $ψ0, $H, $c_ops, $sc_ops, $ntraj, $stoc_alg_quantumoptics, $stoc_dt)
+smesolve_quantumoptics = @benchmark quantumoptics_smesolve($tlist, $ψ0, $H, $c_ops, $sc_ops, $([a'*a]), $ntraj, $stoc_alg_quantumoptics, $stoc_dt, f_out=nothing)
 
 # %% [markdown]
 # ## Plotting the Results

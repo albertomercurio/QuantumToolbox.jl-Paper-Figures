@@ -9,7 +9,7 @@ The website is built using [Quarto](https://quarto.org). The steps to build the 
 1. Install the Python virtual environment (only once): `python3 -m venv pyenv`
 2. Activate the Python virtual environment and install the dependencies: `source pyenv/bin/activate && pip install -r requirements.txt`
 3. Load the environment variables: `set -a && source _environment && set +a`
-4. Run Quarto: `quarto publish gh-pages --no-browser`
+4. Run Quarto: `all-render` or `all-publish`
 
 > [!NOTE]
 > All the following commands should be run under the root folder of this repository: `/path/to/quantumtoolbox.jl-paper-figures/`

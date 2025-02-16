@@ -4,17 +4,17 @@
 PYENV:=pyenv/bin/activate
 
 qutip-benchmark:
-	bash -c "source $(PYENV) && python src/python/qutip_benchmarks.py"
+	bash -c "set -a && source _environment && set +a && source $(PYENV) && python src/python/qutip_benchmarks.py"
 
 dynamiqs-benchmark:
-	bash -c "source $(PYENV) && python src/python/dynamiqs_benchmarks.py"
+	bash -c "set -a && source _environment && set +a && source $(PYENV) && python src/python/dynamiqs_benchmarks.py"
 
 render:
-	quarto render
+	set -a && source _environment && set +a && quarto render
 
 # run Quarto publish command
 publish:
-	quarto publish gh-pages --no-browser
+	set -a && source _environment && set +a && quarto publish gh-pages --no-browser
 
 # Default target
 all-render: qutip-benchmark dynamiqs-benchmark render
