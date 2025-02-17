@@ -335,10 +335,10 @@ rowgap!(fig.layout, 5)
 
 
 # For the LaTeX document
-save("../figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
+# save("../figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
-# For the README file in the GitHub repository
-save("../figures/benchmarks.svg", fig, pt_per_unit = 2.0)
+# # For the README file in the GitHub repository
+# save("../figures/benchmarks.svg", fig, pt_per_unit = 2.0)
 
 fig
 
