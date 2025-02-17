@@ -40,7 +40,7 @@ nth = 0.2
 ntraj = 100
 stoc_dt = 1e-3
 stoc_alg_quantumtoolbox = SRIW1()
-stoc_alg_quantumoptics = EM()
+stoc_alg_quantumoptics = EM() # Other solvers don't work and RKMil gives wrong results
 
 # %% [markdown]
 # ### QuantumToolbox.jl
@@ -53,9 +53,9 @@ c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 tlist = range(0, 10, 100)
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.mesolve(H, ψ0, tlist, c_ops, progress_bar=Val(false)).states[2] # Warm-up
+QuantumToolbox.mesolve(H, ψ0, tlist, c_ops, e_ops=[a'*a], progress_bar=Val(false)) # Warm-up
 
-mesolve_quantumtoolbox = @benchmark QuantumToolbox.mesolve($H, $ψ0, $tlist, $c_ops, progress_bar=Val(false)).states[2]
+mesolve_quantumtoolbox = @benchmark QuantumToolbox.mesolve($H, $ψ0, $tlist, $c_ops, e_ops=$([a'*a]), progress_bar=Val(false)).expect
 
 
 # %% [markdown]
@@ -71,9 +71,11 @@ c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 tlist = range(0, 10, 100)
 ψ0 = QuantumOptics.fockstate(bas, 0)
 
-QuantumOptics.timeevolution.master(tlist, ψ0, H, c_ops)[2][2]
+f_out = (t, state) -> QuantumOptics.expect(a'*a, state)
 
-mesolve_quantumoptics = @benchmark QuantumOptics.timeevolution.master($tlist, $ψ0, $H, $c_ops, abstol=1e-8, reltol=1e-6)
+QuantumOptics.timeevolution.master(tlist, ψ0, H, c_ops, fout=f_out)
+
+mesolve_quantumoptics = @benchmark QuantumOptics.timeevolution.master($tlist, $ψ0, $H, $c_ops, fout=f_out, abstol=1e-8, reltol=1e-6)
 
 # %% [markdown]
 # ## Monte Carlo quantum trajectories simulation
@@ -88,10 +90,10 @@ c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 tlist = range(0, 10, 100)
 ψ0 = QuantumToolbox.fock(N, 0)
 
-QuantumToolbox.mcsolve(H, ψ0, tlist, c_ops, progress_bar=Val(false), ntraj=ntraj).states[2] # Warm-up
+QuantumToolbox.mcsolve(H, ψ0, tlist, c_ops, e_ops=[a'*a], progress_bar=Val(false), ntraj=ntraj) # Warm-up
 
 mcsolve_quantumtoolbox =
-    @benchmark QuantumToolbox.mcsolve($H, $ψ0, $tlist, $c_ops, progress_bar=Val(false), ntraj=ntraj).states[2]
+    @benchmark QuantumToolbox.mcsolve($H, $ψ0, $tlist, $c_ops, e_ops=$([a'*a]), progress_bar=Val(false), ntraj=ntraj).expect
 
 
 # %% [markdown]
@@ -107,15 +109,15 @@ c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 tlist = range(0, 10, 100)
 ψ0 = QuantumOptics.fockstate(bas, 0)
 
-function quantumoptics_mcwf(tlist, ψ0, H, c_ops, ntraj)
+function quantumoptics_mcwf(tlist, ψ0, H, c_ops, e_ops, ntraj, f_out=(t, state) -> QuantumOptics.expect(e_ops[1], state))
     Threads.@threads for i in 1:ntraj
-        QuantumOptics.timeevolution.mcwf(tlist, ψ0, H, c_ops, display_beforeevent=true, display_afterevent=true, abstol=1e-8, reltol=1e-6)[2][2]
+        QuantumOptics.timeevolution.mcwf(tlist, ψ0, H, c_ops, fout=f_out, display_beforeevent=true, display_afterevent=true, abstol=1e-8, reltol=1e-6)
     end
 end
 
-quantumoptics_mcwf(tlist, ψ0, H, c_ops, ntraj) # Warm-up
+quantumoptics_mcwf(tlist, ψ0, H, c_ops, [a'*a], ntraj) # Warm-up
 
-mcsolve_quantumoptics = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, ntraj)
+mcsolve_quantumoptics = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, $([a'*a]), ntraj)
 
 # %% [markdown]
 
@@ -132,7 +134,7 @@ tlist = 0:stoc_dt*20:10 # We use this because dynamiqs only supports tsave to be
 ψ0 = QuantumToolbox.fock(N, 0)
 
 # `sc_ops` not a vector, to use diagonal noise solvers
-sol_qt_sse = QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops[1], e_ops=[a'*a], progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox) # Warm-up
+sol_qt_sse = QuantumToolbox.ssesolve(H, ψ0, tlist, sc_ops[1], e_ops=[a'*a], progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, abstol=5e-3) # Warm-up
 
 sol_qt_me = QuantumToolbox.mesolve(H, ψ0, tlist, sc_ops, e_ops=[a'*a], progress_bar=Val(false))
 
@@ -140,7 +142,7 @@ converged = sum(abs, vec(sol_qt_sse.expect) .- vec(sol_qt_me.expect)) ./ length(
 converged < 1e-1 || error("ssesolve and mesolve results do not match")
 
 ssesolve_quantumtoolbox =
-    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $(sc_ops[1]),  progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox).states[2]
+    @benchmark QuantumToolbox.ssesolve($H, $ψ0, $tlist, $(sc_ops[1]), e_ops=$([a'*a]),  progress_bar=Val(false), ntraj=ntraj, alg=stoc_alg_quantumtoolbox, abstol=5e-3).expect
 
 
 # %% [markdown]
@@ -173,7 +175,7 @@ expect_qo_sse = quantumoptics_ssesolve(tlist, ψ0, H, sc_ops, [a'*a], ntraj, sto
 converged = sum(abs, expect_qo_sse .- vec(sol_qt_me.expect)) ./ length(expect_qo_sse)
 converged < 1e-1 || error("ssesolve and mesolve results do not match")
 
-ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, $([a'*a]), ntraj, stoc_alg_quantumoptics, stoc_dt, f_out=nothing)
+ssesolve_quantumoptics = @benchmark quantumoptics_ssesolve($tlist, $ψ0, $H, $sc_ops, $([a'*a]), ntraj, stoc_alg_quantumoptics, stoc_dt)
 
 # && [markdown]
 # ## Stochastic Master Equation
@@ -196,7 +198,7 @@ sol_qt_me = QuantumToolbox.mesolve(H, ψ0, tlist, vcat(c_ops, sc_ops), e_ops=[a'
 converged = sum(abs, vec(sol_qt_sme.expect) .- vec(sol_qt_me.expect)) ./ length(sol_qt_sme.expect)
 converged < 1e-1 || error("smesolve and mesolve results do not match")
 
-smesolve_quantumtoolbox = @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $(sc_ops[1]), ntraj=$ntraj, progress_bar=Val(false), alg=stoc_alg_quantumtoolbox).states[2]
+smesolve_quantumtoolbox = @benchmark QuantumToolbox.smesolve($H, $ψ0, $tlist, $c_ops, $(sc_ops[1]), e_ops=$([a'*a]), ntraj=$ntraj, progress_bar=Val(false), alg=stoc_alg_quantumtoolbox).expect
 
 # %% [markdown]
 # ### QuantumOptics.jl
@@ -228,7 +230,7 @@ expec_qo_sme = quantumoptics_smesolve(tlist, ψ0, H, c_ops, sc_ops, [a'*a], ntra
 converged = sum(abs, expec_qo_sme .- vec(sol_qt_me.expect)) ./ length(expec_qo_sme)
 converged < 1e-1 || error("smesolve and mesolve results do not match")
 
-smesolve_quantumoptics = @benchmark quantumoptics_smesolve($tlist, $ψ0, $H, $c_ops, $sc_ops, $([a'*a]), $ntraj, $stoc_alg_quantumoptics, $stoc_dt, f_out=nothing)
+smesolve_quantumoptics = @benchmark quantumoptics_smesolve($tlist, $ψ0, $H, $c_ops, $sc_ops, $([a'*a]), $ntraj, $stoc_alg_quantumoptics, $stoc_dt)
 
 # %% [markdown]
 # ## Plotting the Results
@@ -271,23 +273,21 @@ labels = ["QuantumToolbox.jl", "QuantumOptics.jl", "QuTiP", "dynamiqs"]
 
 fig = Figure(size=(plot_figsize_width_pt, plot_figsize_width_pt*0.4))
 
-Label(fig[1, 1:3], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
-
 ax_mesolve = Axis(
-    fig[2, 1],
+    fig[1, 1],
     ylabel=L"Time ($s$)",
     title="mesolve",
     # xticks = (mesolve_times_x, labels[mesolve_times_x]),
     # xticklabelrotation = π/4,
 )
 ax_mcsolve = Axis(
-    fig[2, 2],
+    fig[1, 2],
     title="mcsolve",
     # xticks = (mcsolve_times_x, labels[mcsolve_times_x]),
     # xticklabelrotation = π/4,
 )
 ax_smesolve = Axis(
-    fig[2, 3],
+    fig[1, 3],
     title="smesolve",
     # xticks = (smesolve_times_x, labels[smesolve_times_x]),
     # xticklabelrotation = π/4,
@@ -321,7 +321,7 @@ barplot!(ax_smesolve,
 text!(ax_smesolve, 0.02, 0.98, text = "(c)", font = :bold, align = (:left, :top), space = :relative)
 
 elements = [PolyElement(polycolor = colors[i]) for i in 1:length(labels)]
-Legend(fig[3, 1:3], elements, labels, orientation=:horizontal)
+Legend(fig[2, 1:3], elements, labels, orientation=:horizontal)
 
 ylims!(ax_mesolve, 0, nothing)
 ylims!(ax_mcsolve, 0, nothing)
@@ -331,14 +331,15 @@ hidexdecorations!(ax_mesolve)
 hidexdecorations!(ax_mcsolve)
 hidexdecorations!(ax_smesolve)
 
-rowgap!(fig.layout, 5)
-
 
 # For the LaTeX document
 # save("../figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
 # # For the README file in the GitHub repository
-# save("../figures/benchmarks.svg", fig, pt_per_unit = 2.0)
+Label(fig[0, 1:3], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
+save("../figures/benchmarks.svg", fig, pt_per_unit = 2.0)
+
+rowgap!(fig.layout, 5)
 
 fig
 

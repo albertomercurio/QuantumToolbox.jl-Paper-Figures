@@ -31,12 +31,13 @@ def qutip_mesolve(N, Δ, F, γ, nth, num_repeats=100):
 
     tlist = np.linspace(0, 10, 100)
     ψ0 = qutip.fock(N, 0)
+    options = {"store_final_state": True}
 
-    qutip.mesolve(H, ψ0, tlist, c_ops).states[1] # Warm-up
+    qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=[a.dag() * a], options=options) # Warm-up
 
     # Define the statement to benchmark
     def solve():
-        qutip.mesolve(H, ψ0, tlist, c_ops).states[1]
+        qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=[a.dag() * a], options=options).expect
 
     # Run the benchmark using timeit
     times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
@@ -52,14 +53,17 @@ def qutip_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     tlist = np.linspace(0, 10, 100)
     ψ0 = qutip.fock(N, 0)
 
+    options = {"progress_bar": False, "map": "parallel", "num_cpus": num_threads, "store_final_state": True}
+
     qutip.mcsolve(
         H,
         ψ0,
         tlist,
         c_ops,
+        e_ops = [a.dag() * a],
         ntraj = ntraj,
-        options = {"progress_bar": False, "map": "parallel", "num_cpus": num_threads},
-    ).states[1] # Warm-up
+        options = options,
+    ) # Warm-up
 
     # Define the statement to benchmark
     def solve():
@@ -68,9 +72,10 @@ def qutip_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
             ψ0,
             tlist,
             c_ops,
+            e_ops = [a.dag() * a],
             ntraj = ntraj,
-            options = {"progress_bar": False, "map": "parallel", "num_cpus": num_threads},
-        ).states[1]
+            options = options,
+        ).expect
     
     # Run the benchmark using timeit
     times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
@@ -86,6 +91,8 @@ def qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     tlist = np.arange(0, 10, stoc_dt*20)
     ψ0 = qutip.fock(N, 0)
 
+    options = {"progress_bar": False, "map": "parallel", "num_cpus": num_threads, "store_final_state": True}
+
     sol_sse = qutip.ssesolve(
         H,
         ψ0,
@@ -93,9 +100,7 @@ def qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
         sc_ops,
         e_ops=[a.dag() * a],
         ntraj=ntraj,
-        options={"progress_bar": False, 
-                     "map": "parallel", 
-                     "num_cpus": num_threads,},
+        options=options,
     ) # Warm-up
     sol_me = qutip.mesolve(H, ψ0, tlist, sc_ops, e_ops=[a.dag() * a])
     # Test if the two methods give the same result up to sol tolerance
@@ -110,11 +115,10 @@ def qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
             ψ0,
             tlist,
             sc_ops,
+            e_ops=[a.dag() * a],
             ntraj=ntraj,
-            options={"progress_bar": False, 
-                     "map": "parallel", 
-                     "num_cpus": num_threads,},
-        ).states[1]
+            options=options,
+        ).expect
     
     # Run the benchmark using timeit
     times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
@@ -131,6 +135,8 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     tlist = np.arange(0, 10, stoc_dt*20)
     ψ0 = qutip.fock(N, 0)
 
+    options = {"progress_bar": False, "map": "parallel", "num_cpus": num_threads, "store_final_state": True}
+
     sol_sme = qutip.smesolve(
         H,
         ψ0,
@@ -139,9 +145,7 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
         sc_ops,
         e_ops=[a.dag() * a],
         ntraj=ntraj,
-        options={"progress_bar": False, 
-                     "map": "parallel", 
-                     "num_cpus": num_threads,},
+        options=options,
     ) # Warm-up
     sol_me = qutip.mesolve(H, ψ0, tlist, [c_ops[0], sc_ops[0]], e_ops=[a.dag() * a])
     # Test if the two methods give the same result up to sol tolerance
@@ -157,11 +161,10 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
             tlist,
             c_ops,
             sc_ops,
+            e_ops=[a.dag() * a],
             ntraj=ntraj,
-            options={"progress_bar": False, 
-                     "map": "parallel", 
-                     "num_cpus": num_threads,},
-        ).states[1]
+            options=options,
+        ).expect
     
     # Run the benchmark using timeit
     times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times

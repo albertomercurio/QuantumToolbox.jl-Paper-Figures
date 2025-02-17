@@ -34,16 +34,18 @@ def dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100):
     tlist = jnp.linspace(0, 10, 100)
     ψ0 = dynamiqs.fock(N, 0)
 
-    dynamiqs.mesolve(H, c_ops, ψ0, tlist, options = dynamiqs.Options(progress_meter = None)).states # Warm-up
+    options = dynamiqs.Options(progress_meter = None, save_states=False)
+
+    dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options).states # Warm-up
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.mesolve(H, c_ops, ψ0, tlist, options = dynamiqs.Options(progress_meter = None)).states
+        dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options).expects
     
-    # Run the benchmark using timeit
-    times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
+    # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
+    times = timeit.repeat(solve, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
 
-    return [t * 1e9 for t in times]  # List of times in nanoseconds
+    return [t * 1e9 for t in times[1:]]  # List of times in nanoseconds
 
 def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     a = dynamiqs.destroy(N)
@@ -58,9 +60,10 @@ def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     keys = jax.random.split(key, ntraj)
 
     solver = dynamiqs.solver.EulerMaruyama(dt=stoc_dt)
+    options = dynamiqs.Options(progress_meter = None, save_states=False)
 
-    sol_sse = dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=dynamiqs.Options(progress_meter=None)) # Warm-up
-    sol_me = dynamiqs.mesolve(H, sc_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=dynamiqs.Options(progress_meter=None))
+    sol_sse = dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=options) # Warm-up
+    sol_me = dynamiqs.mesolve(H, sc_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options)
     # Test if the two methods give the same result up to sol tolerance
     expect_sse = jnp.sum(sol_sse.expects, axis=0)[0,:] / ntraj
     convergence_metric = jnp.sum(jnp.abs(expect_sse - sol_me.expects[0,:])) / len(tlist)
@@ -69,12 +72,12 @@ def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, solver=solver, options=dynamiqs.Options(progress_meter=None)).states
+        dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=options).expects
     
-    # Run the benchmark using timeit
-    times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
+    # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
+    times = timeit.repeat(solve, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
 
-    return [t * 1e9 for t in times]  # List of times in nanoseconds
+    return [t * 1e9 for t in times[1:]]  # List of times in nanoseconds
 
 def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     a = dynamiqs.destroy(N)
@@ -90,9 +93,10 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     keys = jax.random.split(key, ntraj)
 
     solver = dynamiqs.solver.EulerMaruyama(dt=stoc_dt)
+    options = dynamiqs.Options(save_states=False)
 
-    sol_sme = dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver) # Warm-up
-    sol_me = dynamiqs.mesolve(H, [sc_ops[0], sc_ops[1]], ψ0, tlist, exp_ops=[a.dag() @ a])
+    sol_sme = dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=options) # Warm-up
+    sol_me = dynamiqs.mesolve(H, [sc_ops[0], sc_ops[1]], ψ0, tlist, exp_ops=[a.dag() @ a], options=options)
     # Test if the two methods give the same result up to sol tolerance
     expect_sme = jnp.sum(sol_sme.expects, axis=0)[0,:] / ntraj
     convergence_metric = jnp.sum(jnp.abs(expect_sme - sol_me.expects[0,:])) / len(tlist)
@@ -101,12 +105,12 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, solver=solver).states
+        dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=options).block_until_ready()
     
-    # Run the benchmark using timeit
-    times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
+    # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
+    times = timeit.repeat(solve, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
 
-    return [t * 1e9 for t in times]  # List of times in nanoseconds
+    return [t * 1e9 for t in times[1:]]  # List of times in nanoseconds
 
 # %%
 
