@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.3"
+julia_version = "1.11.4"
 manifest_format = "2.0"
 project_hash = "38f462f9197711e8f541a66e3da7c251a0dcbabb"
 
@@ -1770,7 +1770,7 @@ version = "3.2.4+0"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+2"
+version = "0.8.1+4"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -2214,9 +2214,9 @@ version = "0.5.4"
 
 [[deps.QuantumToolbox]]
 deps = ["ArrayInterface", "DiffEqBase", "DiffEqCallbacks", "DiffEqNoiseProcess", "Distributed", "FFTW", "Graphs", "IncompleteLU", "LinearAlgebra", "LinearSolve", "OrdinaryDiffEqCore", "OrdinaryDiffEqTsit5", "Pkg", "Random", "Reexport", "SciMLBase", "SciMLOperators", "SparseArrays", "SpecialFunctions", "StaticArraysCore", "StochasticDiffEq"]
-path = "/home/alberto/.julia/dev/QuantumToolbox"
+git-tree-sha1 = "ed2788219311c5f8e3ad5ec0b3bc72c54b488523"
 uuid = "6c2fb7c5-b903-41d2-bc5e-5a7c320b9fab"
-version = "0.27.0"
+version = "0.29.1"
 weakdeps = ["CUDA", "CairoMakie", "GPUArrays", "KernelAbstractions"]
 
     [deps.QuantumToolbox.extensions]
