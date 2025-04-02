@@ -34,7 +34,7 @@ def dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100):
     tlist = jnp.linspace(0, 10, 100)
     ψ0 = dynamiqs.fock(N, 0)
 
-    options = dynamiqs.Options(progress_meter = None, save_states=False)
+    options = dynamiqs.Options(progress_meter = False, save_states=False)
 
     dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options).states # Warm-up
 
@@ -59,10 +59,10 @@ def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     key = jax.random.PRNGKey(20)
     keys = jax.random.split(key, ntraj)
 
-    solver = dynamiqs.solver.EulerMaruyama(dt=stoc_dt)
-    options = dynamiqs.Options(progress_meter = None, save_states=False)
+    method = dynamiqs.method.EulerMaruyama(dt=stoc_dt)
+    options = dynamiqs.Options(progress_meter = False, save_states=False)
 
-    sol_sse = dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=options) # Warm-up
+    sol_sse = dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], method=method, options=options) # Warm-up
     sol_me = dynamiqs.mesolve(H, sc_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options)
     # Test if the two methods give the same result up to sol tolerance
     expect_sse = jnp.sum(sol_sse.expects, axis=0)[0,:] / ntraj
@@ -72,7 +72,7 @@ def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=options).expects
+        dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], method=method, options=options).expects
     
     # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
     times = timeit.repeat(solve, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
@@ -92,10 +92,10 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     key = jax.random.PRNGKey(20)
     keys = jax.random.split(key, ntraj)
 
-    solver = dynamiqs.solver.EulerMaruyama(dt=stoc_dt)
+    method = dynamiqs.method.EulerMaruyama(dt=stoc_dt)
     options = dynamiqs.Options(save_states=False)
 
-    sol_sme = dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=options) # Warm-up
+    sol_sme = dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], method=method, options=options) # Warm-up
     sol_me = dynamiqs.mesolve(H, [sc_ops[0], sc_ops[1]], ψ0, tlist, exp_ops=[a.dag() @ a], options=options)
     # Test if the two methods give the same result up to sol tolerance
     expect_sme = jnp.sum(sol_sme.expects, axis=0)[0,:] / ntraj
@@ -105,7 +105,7 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], solver=solver, options=options).block_until_ready()
+        dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], method=method, options=options).block_until_ready()
     
     # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
     times = timeit.repeat(solve, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
@@ -126,6 +126,6 @@ benchmark_results = {
 print("Saving results to JSON...")
 
 # Save results to JSON
-with open("src/python/dynamiqs_benchmark_results.json", "w") as f:
+with open("src/benchmarks/python/dynamiqs_benchmark_results.json", "w") as f:
     json.dump(benchmark_results, f, indent=4)
 # %%

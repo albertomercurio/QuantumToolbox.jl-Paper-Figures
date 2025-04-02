@@ -185,6 +185,6 @@ benchmark_results = {
 print("Saving results to JSON...")
 
 # Save results to JSON
-with open("src/python/qutip_benchmark_results.json", "w") as f:
+with open("src/benchmarks/python/qutip_benchmark_results.json", "w") as f:
     json.dump(benchmark_results, f, indent=4)
 # %%
