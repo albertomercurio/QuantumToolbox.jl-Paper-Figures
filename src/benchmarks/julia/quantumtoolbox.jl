@@ -1,6 +1,9 @@
 using QuantumToolbox
 using BenchmarkTools
 using JSON
+using CUDA
+using CUDA.CUSPARSE
+CUDA.allowscalar(false)
 
 # %% [markdown]
 
@@ -27,7 +30,7 @@ function quantumtoolbox_mesolve(N)
     tlist = range(0, 10, 100)
     ψ0 = fock(N, 0)
 
-    mesolve(H, ψ0, tlist, c_ops, e_ops = [a' * a], progress_bar = Val(false)) # Warm-up
+    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = [a' * a], progress_bar = Val(false)) # Warm-up
 
     benchmark_result =
         @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $([a' * a]), progress_bar = Val(false)).expect
@@ -89,6 +92,23 @@ function quantumtoolbox_smesolve(N)
     return benchmark_result.times
 end
 
+function quantumtoolbox_mesolve_gpu(N)
+    a = cu(destroy(N))
+    H = Δ * a' * a - U / 2 * (a^2)' * a^2 + F * (a + a')
+
+    c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+
+    tlist = range(0, 10, 100)
+    ψ0 = cu(fock(N, 0))
+
+    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = [a' * a], progress_bar = Val(false)) # Warm-up
+
+    benchmark_result =
+        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $([a' * a]), progress_bar = Val(false)).expect
+
+    return benchmark_result.times
+end
+
 # %%
 
 result_mesolve = quantumtoolbox_mesolve(N)
@@ -108,4 +128,36 @@ open(output_path, "w") do file
     JSON.print(file, results)
 end
 
+# %% [markdown]
+
+# Varying the Hilbert space dimension $N$
+
 # %%
+
+N_list = floor.(Int, logrange(10, 300, 25))
+
+pr = ProgressBar(length(N_list))
+quantumtoolbox_mesolve_N_cpu = map(N_list) do N
+    next!(pr)
+
+    quantumtoolbox_mesolve(N)
+end
+
+pr = ProgressBar(length(N_list))
+quantumtoolbox_mesolve_N_gpu = map(N_list) do N
+    next!(pr)
+
+    quantumtoolbox_mesolve_gpu(N)
+end
+
+# Save the results to a JSON file
+
+results = Dict(
+    "quantumtoolbox_mesolve_N_cpu" => quantumtoolbox_mesolve_N_cpu,
+    "quantumtoolbox_mesolve_N_gpu" => quantumtoolbox_mesolve_N_gpu,
+)
+
+output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results_N.json")
+open(output_path, "w") do file
+    JSON.print(file, results)
+end

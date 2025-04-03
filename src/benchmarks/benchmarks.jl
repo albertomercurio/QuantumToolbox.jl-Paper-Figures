@@ -62,6 +62,31 @@ smesolve_times = [
     m in [smesolve_quantumtoolbox, smesolve_quantumoptics, smesolve_qutip, smesolve_dynamiqs]
 ]
 
+# Varying the Hilbert space dimension N
+qutip_results_N = JSON.parsefile("python/qutip_benchmark_results_N.json")
+dynamiqs_results_N = JSON.parsefile("python/dynamiqs_benchmark_results_N.json")
+quantumtoolbox_results_N = JSON.parsefile("julia/quantumtoolbox_benchmark_results_N.json")
+
+mesolve_qutip_N_cpu = (times=convert(Vector{Vector{Float64}}, qutip_results_N["qutip_mesolve_N_cpu"]),)
+mesolve_qutip_N_gpu = (times=convert(Vector{Vector{Float64}}, qutip_results_N["qutip_mesolve_N_gpu"]),)
+
+mesolve_dynamiqs_N_cpu = (times=convert(Vector{Vector{Float64}}, dynamiqs_results_N["dynamiqs_mesolve_N_cpu"]),)
+mesolve_dynamiqs_N_gpu = (times=convert(Vector{Vector{Float64}}, dynamiqs_results_N["dynamiqs_mesolve_N_gpu"]),)
+
+mesolve_quantumtoolbox_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N["quantumtoolbox_mesolve_N_cpu"]),)
+mesolve_quantumtoolbox_N_gpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N["quantumtoolbox_mesolve_N_gpu"]),)
+
+N_list = floor.(Int, logrange(10, 300, 25))
+
+mesolve_times_N_cpu = [
+    [1e-9 * sum(mm) / length(mm) for mm in m.times] for
+    m in [mesolve_quantumtoolbox_N_cpu, mesolve_qutip_N_cpu, mesolve_dynamiqs_N_cpu]
+]
+mesolve_times_N_gpu = [
+    [1e-9 * sum(mm) / length(mm) for mm in m.times] for
+    m in [mesolve_quantumtoolbox_N_gpu, mesolve_qutip_N_gpu, mesolve_dynamiqs_N_gpu]
+]
+
 mesolve_times_x = [1,2,3,4]
 mcsolve_times_x = [1,2,3]
 ssesolve_times_x = [1,2,3]
@@ -75,26 +100,35 @@ labels = ["QuantumToolbox.jl", "QuantumOptics.jl", "QuTiP", "dynamiqs"]
 
 # %%
 
-fig = Figure(size=(plot_figsize_width_pt, plot_figsize_width_pt*0.4))
+fig = Figure(size=(plot_figsize_width_pt, plot_figsize_width_pt*0.65))
+
+grid_plots = fig[2, 1]
+grid_me_mc_sme = grid_plots[1, 1] # = GridLayout(alignmode=Outside(0, 0, 5, 0))
+grid_me_vs_N = grid_plots[2, 1]
 
 ax_mesolve = Axis(
-    fig[1, 1],
+    grid_me_mc_sme[1, 1],
     ylabel=L"Time ($s$)",
     title="mesolve",
-    # xticks = (mesolve_times_x, labels[mesolve_times_x]),
-    # xticklabelrotation = π/4,
 )
 ax_mcsolve = Axis(
-    fig[1, 2],
+    grid_me_mc_sme[1, 2],
     title="mcsolve",
-    # xticks = (mcsolve_times_x, labels[mcsolve_times_x]),
-    # xticklabelrotation = π/4,
 )
 ax_smesolve = Axis(
-    fig[1, 3],
+    grid_me_mc_sme[1, 3],
     title="smesolve",
-    # xticks = (smesolve_times_x, labels[smesolve_times_x]),
-    # xticklabelrotation = π/4,
+)
+ax_mesolve_vs_N_cpu = Axis(
+    grid_me_vs_N[1, 1],
+    ylabel=L"Time ($s$)",
+    xscale = log10,
+    yscale = log10,
+)
+ax_mesolve_vs_N_gpu = Axis(
+    grid_me_vs_N[1, 2],
+    xscale = log10,
+    yscale = log10,
 )
 
 colors = Makie.wong_colors()
@@ -125,7 +159,7 @@ barplot!(ax_smesolve,
 text!(ax_smesolve, 0.02, 0.98, text = "(c)", font = :bold, align = (:left, :top), space = :relative)
 
 elements = [PolyElement(polycolor = colors[i]) for i in 1:length(labels)]
-Legend(fig[2, 1:3], elements, labels, orientation=:horizontal)
+Legend(fig[1, 1], elements, labels, orientation=:horizontal)
 
 ylims!(ax_mesolve, 0, nothing)
 ylims!(ax_mcsolve, 0, nothing)
@@ -135,13 +169,22 @@ hidexdecorations!(ax_mesolve)
 hidexdecorations!(ax_mcsolve)
 hidexdecorations!(ax_smesolve)
 
+# Hilbert space dimension N plots
+
+for (i, m) in enumerate(mesolve_times_N_cpu)
+    plot!(ax_mesolve_vs_N_cpu, N_list, m, color=colors[[1,3,4]][i], label=labels[i])
+end
+for (i, m) in enumerate(mesolve_times_N_gpu)
+    plot!(ax_mesolve_vs_N_gpu, N_list[1:length(m)], m, color=colors[[1,3,4]][i], label=labels[i])
+end
+
 
 # For the LaTeX document
 # save("../figures/benchmarks.pdf", fig, pt_per_unit = 1.0)
 
 # # For the README file in the GitHub repository
-Label(fig[0, 1:3], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
-save(joinpath(@__DIR__, "../../figures/benchmarks.svg"), fig, pt_per_unit = 2.0)
+Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
+# save(joinpath(@__DIR__, "../../figures/benchmarks.svg"), fig, pt_per_unit = 2.0)
 
 rowgap!(fig.layout, 5)
 

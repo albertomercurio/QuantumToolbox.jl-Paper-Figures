@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 import dynamiqs
 import timeit
+from tqdm import tqdm
 import json
 
 dynamiqs.set_device("cpu")
@@ -36,7 +37,7 @@ def dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100):
 
     options = dynamiqs.Options(progress_meter = False, save_states=False)
 
-    dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options).states # Warm-up
+    dynamiqs.mesolve(H, c_ops, ψ0, tlist[0:2], exp_ops=[a.dag() @ a], options=options).states # Warm-up
 
     # Define the statement to benchmark
     def solve():
@@ -128,4 +129,49 @@ print("Saving results to JSON...")
 # Save results to JSON
 with open("src/benchmarks/python/dynamiqs_benchmark_results.json", "w") as f:
     json.dump(benchmark_results, f, indent=4)
+# %% [markdown]
+
+# Varying the Hilbert space dimension
+
+# %%
+
+N_list = np.floor(np.geomspace(10, 300, 25)).astype(int)
+
+dynamiqs_mesolve_N_cpu = []
+for N in tqdm(N_list):
+    num_repeats = 100
+    if N > 50:
+        num_repeats = 40
+    if N > 100:
+        num_repeats = 10
+    if N > 200:
+        num_repeats = 2
+    dynamiqs_mesolve_N_cpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+
+dynamiqs.set_device("gpu")
+
+dynamiqs_mesolve_N_gpu = []
+# In this way it is safe if it fails due to lack of GPU memory
+for N in tqdm(N_list):
+    num_repeats = 100
+    if N > 50:
+        num_repeats = 40
+    if N > 100:
+        num_repeats = 10
+    if N > 200:
+        num_repeats = 2
+    dynamiqs_mesolve_N_gpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+
+benchmark_results_N = {
+    "dynamiqs_mesolve_N_cpu": dynamiqs_mesolve_N_cpu,
+    "dynamiqs_mesolve_N_gpu": dynamiqs_mesolve_N_gpu,
+}
+
+# %%
+
+print("Saving results to JSON...")
+# Save results to JSON
+
+with open("src/benchmarks/python/dynamiqs_benchmark_results_N.json", "w") as f:
+    json.dump(benchmark_results_N, f, indent=4)
 # %%

@@ -29,7 +29,7 @@ function quantumoptics_mesolve(N)
 
     f_out = (t, state) -> expect(a' * a, state)
 
-    timeevolution.master(tlist, ψ0, H, c_ops, fout = f_out)
+    timeevolution.master(tlist[1:2], ψ0, H, c_ops, fout = f_out) # Warm-up
 
     benchmark_result =
         @benchmark timeevolution.master($tlist, $ψ0, $H, $c_ops, fout = $f_out, abstol = 1e-8, reltol = 1e-6)
@@ -138,4 +138,3 @@ open(output_path, "w") do file
 end
 
 # %%
-

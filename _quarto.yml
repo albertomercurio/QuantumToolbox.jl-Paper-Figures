@@ -20,7 +20,7 @@ website:
           - text: Dynamical Shifted Fock
             href: src/dynamical_shifted_fock.jl
           - text: Comparison with other packages
-            href: src/benchmarks.jl
+            href: src/benchmarks/benchmarks.jl
       - about.qmd
     tools:
       - icon: github

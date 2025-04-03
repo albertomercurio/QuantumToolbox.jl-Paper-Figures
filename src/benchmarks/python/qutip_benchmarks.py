@@ -1,8 +1,10 @@
 # %%
 import numpy as np
 import qutip
+import qutip_jax
 import timeit
 import json
+from tqdm import tqdm
 import os
 
 num_threads = int(os.getenv("JULIA_NUM_THREADS", int(os.cpu_count() / 2)))
@@ -33,7 +35,7 @@ def qutip_mesolve(N, Δ, F, γ, nth, num_repeats=100):
     ψ0 = qutip.fock(N, 0)
     options = {"store_final_state": True}
 
-    qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=[a.dag() * a], options=options) # Warm-up
+    qutip.mesolve(H, ψ0, tlist[0:2], c_ops, e_ops=[a.dag() * a], options=options) # Warm-up
 
     # Define the statement to benchmark
     def solve():
@@ -170,6 +172,31 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
 
     return [t * 1e9 for t in times]  # List
+
+def qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=100):
+    """Benchmark qutip.mesolve using timeit for more accurate timing."""
+    with qutip.CoreOptions(default_dtype="jax"):
+        a = qutip.destroy(N)
+        ψ0 = qutip.fock(N, 0)
+    
+    H = Δ * a.dag() * a - U/2 * a.dag()**2 * a**2 + F * (a + a.dag())
+    c_ops = [np.sqrt(γ * (1 + nth)) * a, np.sqrt(γ * nth) * a.dag()]
+
+    tlist = np.linspace(0, 10, 100)
+    
+    options = {"store_final_state": True, "method": "diffrax"}
+
+    qutip.mesolve(H, ψ0, tlist[0:2], c_ops, e_ops=[a.dag() * a], options=options) # Warm-up
+
+    # Define the statement to benchmark
+    def solve():
+        qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=[a.dag() * a], options=options).expect
+
+    # Run the benchmark using timeit
+    times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
+
+    return [t * 1e9 for t in times]  # List of times in nanoseconds
+
 # %%
 
 # Benchmark all cases
@@ -187,4 +214,47 @@ print("Saving results to JSON...")
 # Save results to JSON
 with open("src/benchmarks/python/qutip_benchmark_results.json", "w") as f:
     json.dump(benchmark_results, f, indent=4)
+
+# %% [markdown]
+# Varying the Hilbert space dimension $N$
+
+# %%
+
+N_list = np.floor(np.geomspace(10, 300, 25)).astype(int)
+
+qutip_mesolve_N_cpu = []
+for N in tqdm(N_list):
+    num_repeats = 100
+    if N > 50:
+        num_repeats = 40
+    if N > 100:
+        num_repeats = 10
+    if N > 200:
+        num_repeats = 2
+    qutip_mesolve_N_cpu.append(qutip_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+
+qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
+for N in tqdm(N_list):
+    num_repeats = 100
+    if N > 50:
+        num_repeats = 40
+    if N > 100:
+        num_repeats = 10
+    if N > 200:
+        num_repeats = 2
+    qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=num_repeats))
+
+benchmark_results_N = {
+    "qutip_mesolve_N_cpu": qutip_mesolve_N_cpu,
+    "qutip_mesolve_N_gpu": qutip_mesolve_N_gpu,
+}
+
+# %%
+
+print("Saving results to JSON...")
+# Save results to JSON
+
+with open("src/benchmarks/python/qutip_benchmark_results_N.json", "w") as f:
+    json.dump(benchmark_results_N, f, indent=4)
+
 # %%
