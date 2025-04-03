@@ -191,6 +191,9 @@ text!(ax_smesolve, 0.5, 1.0, text = "smesolve", align = (:right, :top), space = 
 text!(ax_mesolve_vs_N_cpu, 0.5, 1.0, text = "mesolve (CPU)", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
 text!(ax_mesolve_vs_N_gpu, 0.5, 1.0, text = "mesolve (GPU)", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
 
+rowgap!(fig.layout, 5)
+colgap!(grid_me_mc_sme, 7)
+colgap!(grid_me_vs_N, 5)
 
 # For the LaTeX document
 # save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
@@ -198,10 +201,6 @@ text!(ax_mesolve_vs_N_gpu, 0.5, 1.0, text = "mesolve (GPU)", align = (:right, :t
 # For the README file in the GitHub repository
 # Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
 # save(joinpath(@__DIR__, "../../figures/benchmarks.svg"), fig, pt_per_unit = 2.0)
-
-rowgap!(fig.layout, 5)
-colgap!(grid_me_mc_sme, 7)
-colgap!(grid_me_vs_N, 5)
 
 fig
 
