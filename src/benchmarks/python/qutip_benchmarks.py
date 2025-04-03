@@ -1,5 +1,7 @@
 # %%
 import numpy as np
+import jax
+import jax.numpy as jnp
 import qutip
 import qutip_jax
 import timeit
@@ -175,27 +177,36 @@ def qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 
 def qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=100):
     """Benchmark qutip.mesolve using timeit for more accurate timing."""
-    with qutip.CoreOptions(default_dtype="jax"):
-        a = qutip.destroy(N)
-        ψ0 = qutip.fock(N, 0)
-    
-    H = Δ * a.dag() * a - U/2 * a.dag()**2 * a**2 + F * (a + a.dag())
-    c_ops = [np.sqrt(γ * (1 + nth)) * a, np.sqrt(γ * nth) * a.dag()]
+    with jax.default_device(jax.devices("gpu")[0]):
+        with qutip.CoreOptions(default_dtype="jaxdia"):
+            a = qutip.destroy(N)
+        
+            # We need to convert H to jaxdia again
+            H = (Δ * a.dag() * a - U/2 * a.dag()**2 * a**2 + F * (a + a.dag())).to("jaxdia")
+            c_ops = [jnp.sqrt(γ * (1 + nth)) * a, jnp.sqrt(γ * nth) * a.dag()]
 
-    tlist = np.linspace(0, 10, 100)
-    
-    options = {"store_final_state": True, "method": "diffrax"}
+            tlist = jnp.linspace(0, 10, 100)
 
-    qutip.mesolve(H, ψ0, tlist[0:2], c_ops, e_ops=[a.dag() * a], options=options) # Warm-up
+            ψ0 = qutip.fock(N, 0).to("jax") # Dense vector
 
-    # Define the statement to benchmark
-    def solve():
-        qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=[a.dag() * a], options=options).expect
+            options = {
+                "normalize_output":False,
+                "store_states":False,
+                "store_final_state":True,
+                "method":"diffrax",
+            }
 
-    # Run the benchmark using timeit
-    times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
+            # Define the statement to benchmark
+            def solve():
+                qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=[a.dag() * a], options=options).expect
 
-    return [t * 1e9 for t in times]  # List of times in nanoseconds
+            solve() # Warm-up
+
+
+            # Run the benchmark using timeit
+            times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
+
+        return [t * 1e9 for t in times]  # List of times in nanoseconds
 
 # %%
 
@@ -220,7 +231,7 @@ with open("src/benchmarks/python/qutip_benchmark_results.json", "w") as f:
 
 # %%
 
-N_list = np.floor(np.geomspace(10, 300, 25)).astype(int)
+N_list = np.floor(np.linspace(10, 400, 25)).astype(int)
 
 qutip_mesolve_N_cpu = []
 for N in tqdm(N_list):
@@ -231,18 +242,26 @@ for N in tqdm(N_list):
         num_repeats = 10
     if N > 200:
         num_repeats = 2
-    qutip_mesolve_N_cpu.append(qutip_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+    try:
+        qutip_mesolve_N_cpu.append(qutip_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+    except Exception as e:
+        print(f"Failed for N={N} with error: {e}")
+        break
 
 qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
 for N in tqdm(N_list):
-    num_repeats = 100
+    num_repeats = 40
     if N > 50:
-        num_repeats = 40
+        num_repeats = 20
     if N > 100:
         num_repeats = 10
     if N > 200:
         num_repeats = 2
-    qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=num_repeats))
+    try:
+        qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=num_repeats))
+    except Exception as e:
+        print(f"Failed for N={N} with error: {e}")
+        break
 
 benchmark_results_N = {
     "qutip_mesolve_N_cpu": qutip_mesolve_N_cpu,

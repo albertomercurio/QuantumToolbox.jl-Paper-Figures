@@ -135,7 +135,7 @@ with open("src/benchmarks/python/dynamiqs_benchmark_results.json", "w") as f:
 
 # %%
 
-N_list = np.floor(np.geomspace(10, 300, 25)).astype(int)
+N_list = np.floor(np.linspace(10, 400, 25)).astype(int)
 
 dynamiqs_mesolve_N_cpu = []
 for N in tqdm(N_list):
