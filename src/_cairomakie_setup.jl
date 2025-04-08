@@ -5,12 +5,15 @@
 # ```
 # to get the font size in points
 const mm_to_pt = 2.83465
-const plot_figsize_width_pt = 180 * mm_to_pt
+const plot_figsize_width_single_column_pt = 231.84843
+const plot_figsize_width_pt = 483.69687
 const plot_figsize_height_pt = plot_figsize_width_pt * 0.6 # this may vary
 
 #=
 510.0pt for APS textwidth
 246.0pt for APS linewidth
+483.69687pt for Quantum textwidth
+231.84843pt for Quantum linewidth
 180mm for Nature Communications wide figure
 88mm for Nature Communications narrow figure
 =#

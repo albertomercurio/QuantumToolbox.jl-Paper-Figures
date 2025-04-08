@@ -251,9 +251,9 @@ expect_ss_td_2 = expect(a' * a, ρss_td_2)
 #| layout: [[33,34,33], [100]]
 fig = Figure(size=(plot_figsize_width_pt, 0.5*plot_figsize_width_pt))
 
-ax_se = Axis(fig[1, 1], xlabel="Time", ylabel=L"\langle \hat{a}^\dagger \hat{a} \rangle", title="sesolve")
-ax_me = Axis(fig[1, 2], xlabel="Time", title="mesolve")
-ax_mc = Axis(fig[1, 3], xlabel="Time", title="mcsolve")
+ax_se = Axis(fig[1, 1], xlabel="Time", ylabel=L"\langle \hat{a}^\dagger \hat{a} \rangle")
+ax_me = Axis(fig[1, 2], xlabel="Time")
+ax_mc = Axis(fig[1, 3], xlabel="Time")
 ax_td = Axis(fig[2, 1:3], xlabel="Time", ylabel=L"\langle \hat{a}^\dagger \hat{a} \rangle")
 
 lines!(ax_se, tlist, real(res_se.expect[1, :]), color=:dodgerblue4)
@@ -263,7 +263,7 @@ lines!(ax_me, tlist, exp.(-κ * tlist), color=:dimgray, linestyle=:dash, linewid
 text!(ax_me, 40, 0.7, text=L"e^{-\kappa t}", color=:dimgray, fontsize=9)
 
 lines!(ax_mc, tlist, real(res_mc.expect[1, :]), color=:dodgerblue4, label="100 Traj.")
-lines!(ax_mc, tlist, real(res_mc.expect_all[1, :, 11]), color=:lightsteelblue, linewidth=1.25, linestyle=:dash, label="1 Traj.")
+lines!(ax_mc, tlist, real(res_mc.runs_expect[1, 11, :]), color=:lightsteelblue, linewidth=1.25, linestyle=:dash, label="1 Traj.")
 
 lines!(ax_td, tlist2, real(res_me_td.expect[1, :]), color=:dodgerblue4, label="Master Eq.")
 hlines!(ax_td, [expect_ss_td_1], color=:crimson, linestyle=:dash, label=L"n_\mathrm{max} = 1")
@@ -282,10 +282,14 @@ ylims!(ax_me, 0, 1.3)
 ylims!(ax_mc, 0, 1.3)
 ylims!(ax_td, 0, nothing)
 
-text!(ax_se, 0.01, 0.99, text="(a)", space=:relative, align=(:left, :top), font=:bold)
-text!(ax_me, 0.01, 0.99, text="(b)", space=:relative, align=(:left, :top), font=:bold)
-text!(ax_mc, 0.01, 0.99, text="(c)", space=:relative, align=(:left, :top), font=:bold)
-text!(ax_td, 0.01/3, 0.85, text="(d)", space=:relative, align=(:left, :top), font=:bold)
+text!(ax_se, 0.0, 1.0, text="(a)", space=:relative, align=(:left, :top), font=:bold, offset=(2, -1))
+text!(ax_me, 0.0, 1.0, text="(b)", space=:relative, align=(:left, :top), font=:bold, offset=(2, -1))
+text!(ax_mc, 0.0, 1.0, text="(c)", space=:relative, align=(:left, :top), font=:bold, offset=(2, -1))
+text!(ax_td, 0.0, 1.0, text="(d)", space=:relative, align=(:left, :top), font=:bold, offset=(2, -12))
+
+text!(ax_se, 0.5, 1.0, text = "sesolve", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
+text!(ax_me, 0.5, 1.0, text = "mesolve", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
+text!(ax_mc, 0.5, 1.0, text = "mcsolve", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
 
 hideydecorations!(ax_me, ticks=false)
 hideydecorations!(ax_mc, ticks=false)

@@ -1,174 +1,107 @@
 using QuantumToolbox
-using StochasticDiffEq
+# using StochasticDiffEq
 using CairoMakie
 
-# %%
-
-N = 50 # Dimension of the Hilbert space
-Δ = 0.1 # Detuning with respect to the drive
-U = -0.05 # Nonlinearity
-F = 2 # Amplitude of the drive
-γ = 1 # Decay rate
-nth = 0.2
-ntraj = 100
-stoc_dt = 1e-3
-
-# %%
-
-a = destroy(N)
-H = Δ * a' * a - U/2 * a'^2 * a^2 + F * (a + a')
-sc_ops = [sqrt(γ * (1 + nth)) * a]
-
-tlist = 0:stoc_dt*20:10 # We use this because dynamiqs only supports tsave to be multiple of dt
-ψ0 = fock(N, 0)
-
-prob_sse = ssesolveProblem(H, ψ0, tlist, sc_ops, e_ops=[a'*a], saveat=tlist, progress_bar=Val(false), store_measurement=Val(true)) # Warm-up
-
-integrator = init(prob_sse.prob, SRA2())
-
-
-function dWdt(integrator)
-    @inbounds _dWdt = (integrator.W.u[end] .- integrator.W.u[end-1]) ./ (integrator.W.t[end] - integrator.W.t[end-1])
-
-    return _dWdt
-end
-
-sol_sse = solve(prob_sse.prob, SRA2()) 
-
-# %%
-
-import QuantumToolbox: _get_m_expvals, SaveFuncSSESolve
-
-_get_m_expvals(sol_sse, SaveFuncSSESolve)
-
-ssesolve(prob_sse, SRA2())
-
-
-sol_sse = ssesolve(H, ψ0, tlist, sc_ops, e_ops=[a'*a], saveat=tlist, ntraj=500, progress_bar=Val(false), store_measurement=Val(true), alg=SRA2())
-
-# %%
-
-fig = Figure()
-ax = Axis(fig[1, 1])
-
-measurement_avg = sum(sol_sse.measurement, dims=2) / size(sol_sse.measurement, 2)
-measurement_avg = dropdims(measurement_avg, dims=2)
-
-lines!(ax, tlist[1:end-1], measurement_avg[1, :])
-
-fig
-
-# %%
-
-
-
-
-
-
-
-
-
-
+include("_cairomakie_setup.jl")
 
 # %%
 
 # parameters
-DIM = 20               # Hilbert space dimension
-DELTA = 5 * 2 * pi  # cavity detuning
-KAPPA = 2              # cavity decay rate
-INTENSITY = 4          # intensity of initial state
-NUMBER_OF_TRAJECTORIES = 500
-
-# operators
-a = destroy(DIM)
-x = a + a'
-H = DELTA * a' * a
-
-rho_0 = coherent(DIM,sqrt(INTENSITY))
-times = 0:0.00025:1
-
-stoc_solution = smesolve(
-    H, rho_0, times,
-    nothing,
-    [sqrt(KAPPA) * a],
-    e_ops=[x],
-    ntraj=NUMBER_OF_TRAJECTORIES,
-    store_measurement=Val(true),
-)
-
-# %%
-
-measurement_avg = sum(stoc_solution.measurement, dims=2) / size(stoc_solution.measurement, 2)
-measurement_avg = dropdims(measurement_avg, dims=2)
-
-# %%
-
-fig = Figure()
-ax = Axis(fig[1, 1])
-
-lines!(ax, times[1:end-1], measurement_avg[1, :])
-lines!(ax, times, real.(stoc_solution.expect[1, :]))
-
-fig
-
-# %%
-
-prob = ssesolveEnsembleProblem(H, rho_0, times, [sqrt(KAPPA) * a], e_ops=[x], ntraj=NUMBER_OF_TRAJECTORIES, store_measurement=Val(true))
-
-solve(prob.prob, SRA2(), EnsembleThreads(), trajectories=2)
-
-# %%
-
-using QuantumToolbox
-
 N = 20         # Fock space dimension
-Δ = 5 * 2 * π  # cavity detuning
+ω = 2π * 5     # cavity resonance frequency
 κ = 2          # cavity decay rate
-α = 4          # intensity of initial state
-ntraj = 500    # number of trajectories
+n = 4          # intensity of initial state
+ntraj = 1000    # number of trajectories
 
-tlist = 0:0.0025:1
+# %%
+
+tlist = range(0, 1.5, 400)
 
 # operators
 a = destroy(N)
-x = a + a'
-H = Δ * a' * a
+H = ω * a' * a
 
 # initial state
-ψ0 = coherent(N, √α)
+ψ0 = coherent(N, √n)
+# %%
 
-# temperature with average of 0 excitations (absolute zero)
-n_th = 0
-# c_ops  = [√(κ * n_th) * a'] -> nothing
-sc_ops = [√(κ * (n_th + 1)) * a]
+# collapse operators
+sc_ops = [√(κ) * a]
+
+x = (a + a') * √(κ)
 
 sse_sol = ssesolve(
     H,
     ψ0,
     tlist,
-    sc_ops,
+    sc_ops[1],
     e_ops = [x],
     ntraj = ntraj,
     store_measurement = Val(true),
+    # abstol=1e-3,
 )
 
-measurement_avg = sum(sse_sol.measurement, dims=2) / size(sse_sol.measurement, 2)
-measurement_avg = dropdims(measurement_avg, dims=2)
+measurement_sse_avg = sum(sse_sol.measurement, dims=2) / size(sse_sol.measurement, 2)
+measurement_sse_avg = dropdims(measurement_sse_avg, dims=2)
 
 # %%
 
-using CairoMakie
+# temperature with average of 1 excitations
+n_th = 1
+c_ops  = [√(κ * n_th) * a']
+sc_ops = [√(κ * (n_th + 1)) * a]
+
+x_sme = (a + a') * √(κ * (n_th + 1))
+
+sme_sol = smesolve(
+    H,
+    ψ0,
+    tlist,
+    c_ops,
+    sc_ops[1],
+    e_ops = [x_sme],
+    ntraj = ntraj,
+    store_measurement = Val(true)
+)
+
+measurement_sme_avg = sum(sme_sol.measurement, dims=2) / size(sme_sol.measurement, 2)
+measurement_sme_avg = dropdims(measurement_sme_avg, dims=2)
 
 # %%
 
-# plot by CairoMakie.jl
-fig = Figure(size = (500, 350))
-ax = Axis(fig[1, 1], xlabel = "Time")
-lines!(ax, tlist[1:end-1], real(measurement_avg[1,:]), label = L"J_x", color = :red, linestyle = :solid)
-lines!(ax, tlist, real(sse_sol.expect[1,:]),  label = L"\langle x \rangle", color = :black, linestyle = :solid)
+fig = Figure(size = (plot_figsize_width_single_column_pt, 1.2 * plot_figsize_width_single_column_pt))
 
-axislegend(ax, position = :rt)
+ax_sse = Axis(fig[1, 1], ylabel="Measurement")
+ax_sme = Axis(fig[2, 1], ylabel="Measurement", xlabel = "Time")
+
+lines!(ax_sse, tlist[1:end-1], real(measurement_sse_avg[1,:]), label = L"J_x", color = :lightsteelblue)
+lines!(ax_sse, tlist, real(sse_sol.expect[1,:]),  label = L"\langle \hat{X} \rangle", color = :dodgerblue4)
+
+lines!(ax_sme, tlist[1:end-1], real(measurement_sme_avg[1,:]), label = L"J_x", color = :lightsteelblue)
+lines!(ax_sme, tlist, real(sme_sol.expect[1,:]),  label = L"\langle \hat{a} + \hat{a}^\dagger \rangle", color = :dodgerblue4)
+axislegend(ax_sse, position = :rt, padding = 0)
+
+# -- LIMITS --
+
+xlims!(ax_sse, tlist[1], tlist[end])
+xlims!(ax_sme, tlist[1], tlist[end])
+ylims!(ax_sse, -11, 11)
+ylims!(ax_sme, -11, 11)
+
+# -- DECORATION --
+hidexdecorations!(ax_sse, ticks=false)
+
+# -- TEXT --
+text!(ax_sse, 0.0, 1.0, text="(a)", space=:relative, align=(:left, :top), font=:bold, offset=(2, -1))
+text!(ax_sme, 0.0, 1.0, text="(b)", space=:relative, align=(:left, :top), font=:bold, offset=(2, -1))
+
+text!(ax_sse, 0.5, 1.0, text = "ssesolve", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
+text!(ax_sme, 0.5, 1.0, text = "smesolve", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
+
+# -- SPACING --
+rowgap!(fig.layout, 10)
+
+# -- SAVE FIGURE --
+save(joinpath(@__DIR__, "../figures/sse-sme.pdf"), fig, pt_per_unit = 1.0)
 
 fig
-
-# %%
