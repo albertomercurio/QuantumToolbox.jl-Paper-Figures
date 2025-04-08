@@ -76,9 +76,7 @@
 
 # %%
 using LinearAlgebra
-import QuantumToolbox as qt
-import QuantumCumulants
-using ModelingToolkit
+using QuantumToolbox
 using CairoMakie
 
 include("_cairomakie_setup.jl")
@@ -90,107 +88,46 @@ include("_cairomakie_setup.jl")
 # %%
 # Parameters
 
-F   = 5
-Δc  = 0.0
-Δa  = 50
-γ   = 1
-U = 0.002
-g = 3
+const F   = 7
+const Δc  = 0.0
+const Δa  = -0.3
+const γ   = 1
+const U = 0.002
+const g = 3
 
-N0 = 200
+const N0 = 200
 
-a0 = qt.tensor(qt.destroy(N0), qt.qeye(2))
+const a0 = tensor(destroy(N0), qeye(2))
 
-σm0 = qt.tensor(qt.qeye(N0), qt.sigmam())
-σz0 = qt.tensor(qt.qeye(N0), qt.sigmaz())
-
-# %%
-
-# Define the Hamiltonian
-function H(Δc, Δa, g, F, U, a, σz, σm)
-    Δc*a'*a + Δa/2 * σz + U*(a^2)'*a^2 + g*(a*σm' + a'*σm) + F*(a+a')
-end
-
-# Define collapse operators
-function c_ops(γ, a, σm)
-    [sqrt(γ)*a, sqrt(γ)*σm]
-end
-
-# %% [markdown]
-# We now study the number of photons at the steadystate as a function of the cavity-drive detuning
-
-# %%
-Δ_list = range(-5, 5, 60)
-
-ss_photons = similar(Δ_list)
-
-pr = qt.ProgressBar(length(Δ_list))
-Threads.@threads for (i, Δ) in collect(enumerate(Δ_list))
-    H0 = H(Δ, Δa, g, F, U, a0, σz0, σm0)
-    c_ops0 = c_ops(γ, a0, σm0)
-
-    ρss = qt.steadystate(H0, c_ops0, solver=qt.SteadyStateLinearSolver())
-    ss_photons[i] = real(qt.expect(a0'*a0, ρss))
-
-    qt.next!(pr)
-end
-# %%
-
-fig = Figure(size=(400, 200))
-ax = Axis(fig[1, 1])
-
-lines!(ax, Δ_list, ss_photons)
-
-vlines!(ax, [-0.5], color=:black)
-
-fig
+const σm0 = tensor(qeye(N0), sigmam())
+const σz0 = tensor(qeye(N0), sigmaz())
 
 # %% [markdown]
 # Full Master Equation
 
 # %%
-Δa = -0.2
 
-# a0 = cu(a0)
-# sm0 = cu(sm0)
-# sp0 = cu(sp0)
-# sz0 = cu(sz0)
+H0     = Δc*a0'*a0 + Δa/2 * σz0 + U*(a0^2)'*a0^2 + g*(a0*σm0' + a0'*σm0) + F*(a0+a0')
+c_ops0 = [√γ*a0, √γ*σm0]
 
-H0     = H(Δc, Δa, g, F, U, a0, σz0, σm0)
-c_ops0 = c_ops(γ, a0, σm0)
-
-ψ0 = qt.tensor(qt.fock(N0, 0), qt.basis(2, 1))
-# ψ0 = cu(ψ0)
+ψ0 = tensor(fock(N0, 0), basis(2, 1))
 
 tlist = range(0, 15/γ, 1000)
 tlist_save = [tlist[1], 2.2, 0.9*tlist[end]]
 
-sol = qt.mesolve(H0, ψ0, tlist, c_ops0, e_ops=[a0'*a0, a0], saveat=tlist_save);
+sol = mesolve(H0, ψ0, tlist, c_ops0, e_ops=[a0'*a0, a0], saveat=tlist_save);
 
 # %% [markdown]
 # Dynamical Shifted Fock
 
 # %%
 function H_dsf(op_l, p)
-    Δc = p.Δc
-    Δa = p.Δa
-    U = p.U
-    g = p.g
-    F = p.F
-    σm = p.σm
-    σz = p.σz
-
     a = op_l[1]
-
-    return H(Δc, Δa, g, F, U, a, σz, σm)
+    return Δc*a'*a + Δa/2 * σz + U*(a^2)'*a^2 + g*(a*σm' + a'*σm) + F*(a+a')
 end
 
 function c_ops_dsf(op_l, p)
-    γ = p.γ
-    σm = p.σm
-
     a = op_l[1]
-
     return [√γ*a, √γ*σm]
 end
 
@@ -199,22 +136,20 @@ function e_ops_dsf(op_l, p)
     return [a'*a, a]
 end
 
+const N_dsf = 15
+
+const a = tensor(destroy(N_dsf), qeye(2))
+const σm = tensor(qeye(N_dsf), sigmam())
+const σz = tensor(qeye(N_dsf), sigmaz())
+
 # %%
 
-N_dsf = 15
-
-a = qt.tensor(qt.destroy(N_dsf), qt.qeye(2))
-σm = qt.tensor(qt.qeye(N_dsf), qt.sigmam())
-σz = qt.tensor(qt.qeye(N_dsf), qt.sigmaz())
-
 op_l = [a]
-α0_l = [qt.expect(a0'*a0, ψ0)]
+α0_l = [expect(a0, ψ0)]
 
-ψ0_dsf = qt.tensor(qt.fock(N_dsf, 0), qt.basis(2, 1))
+ψ0_dsf = tensor(fock(N_dsf, 0), basis(2, 1))
 
-p = (Δc=Δc, Δa=Δa, U=U, g=g, F=F, γ=γ, σm=σm, σz=σz)
-
-sol_dsf = qt.dsf_mesolve(H_dsf, ψ0_dsf, tlist, c_ops_dsf, op_l, α0_l, p, e_ops=e_ops_dsf, krylov_dim=5, δα_list=[0.2])
+sol_dsf = dsf_mesolve(H_dsf, ψ0_dsf, tlist, c_ops_dsf, op_l, α0_l, e_ops=e_ops_dsf, krylov_dim=5)
 
 # %% [markdown]
 # We now find the last diagonal element of $\hat{\rho}_{t_1}$ that is larger than $10^{-4}$, that would be the selected Hilbert space dimension. The radius of the circle to draw will be the square root of that index.
@@ -223,15 +158,15 @@ sol_dsf = qt.dsf_mesolve(H_dsf, ψ0_dsf, tlist, c_ops_dsf, op_l, α0_l, p, e_ops
 population_tol = 1e-4
 
 i = 2
-ρt = qt.Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
-ρt = qt.ptrace(ρt, 1)
+ρt = Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
+ρt = ptrace(ρt, 1)
 # max_population = abs.(real.(diag(ρt.data))) |> maximum
 idx = findlast(>(population_tol), abs.(real.(diag(ρt.data))))
 α2_max_full = sqrt(idx)
 
 i = 3
-ρt = qt.Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
-ρt = qt.ptrace(ρt, 1)
+ρt = Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
+ρt = ptrace(ρt, 1)
 # max_population = abs.(real.(diag(ρt.data))) |> maximum
 idx = findlast(>(population_tol), abs.(real.(diag(ρt.data))))
 α3_max_full = sqrt(idx)
@@ -245,33 +180,33 @@ xvec_gpu = (collect(xvec))
 yvec_gpu = (collect(yvec))
 
 i = 1
-ρt = qt.Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
-ρt = qt.ptrace(ρt, 1)
-α1, δα1 = qt.get_coherence(ρt)
+ρt = Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
+ρt = ptrace(ρt, 1)
+α1, δα1 = get_coherence(ρt)
 # max_population = abs.(real.(diag(δα1.data))) |> maximum
 idx = findlast(>(population_tol), abs.(real.(diag(δα1.data))))
 α1_max = sqrt(idx)
-wig1 = qt.wigner(ρt, xvec_gpu, yvec_gpu, g=2) |> Array
+wig1 = wigner(ρt, xvec_gpu, yvec_gpu, g=2) |> Array
 vmax1 = maximum(abs, wig1)
 
 i = 2
-ρt = qt.Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
-ρt = qt.ptrace(ρt, 1)
-α2, δα2 = qt.get_coherence(ρt)
+ρt = Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
+ρt = ptrace(ρt, 1)
+α2, δα2 = get_coherence(ρt)
 # max_population = abs.(real.(diag(δα2.data))) |> maximum
 idx = findlast(>(population_tol), abs.(real.(diag(δα2.data))))
 α2_max = sqrt(idx)
-wig2 = qt.wigner(ρt, xvec_gpu, yvec_gpu, g=2) |> Array
+wig2 = wigner(ρt, xvec_gpu, yvec_gpu, g=2) |> Array
 vmax2 = maximum(abs, wig2)
 
 i = 3
-ρt = qt.Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
-ρt = qt.ptrace(ρt, 1)
-α3, δα3 = qt.get_coherence(ρt)
+ρt = Qobj(Array(sol.states[i].data), dims=sol.states[i].dims)
+ρt = ptrace(ρt, 1)
+α3, δα3 = get_coherence(ρt)
 # max_population = abs.(real.(diag(δα3.data))) |> maximum
 idx = findlast(>(population_tol), abs.(real.(diag(δα3.data))))
 α3_max = sqrt(idx)
-wig3 = qt.wigner(ρt, xvec_gpu, yvec_gpu, g=2) |> Array
+wig3 = wigner(ρt, xvec_gpu, yvec_gpu, g=2) |> Array
 vmax3 = maximum(abs, wig3)
 
 α_max = max(α1_max, α2_max, α3_max)
@@ -292,7 +227,6 @@ ax1 = Axis(fig[1, 1:3], xminorticksvisible=true, yminorticksvisible=true, xaxisp
 ax2 = Axis(fig[2, 1], xticks=-10:10:10, yticks=-10:10:10, xminorticksvisible=true, yminorticksvisible=true, xlabel = L"\mathrm{Re}(\alpha)", ylabel = L"\mathrm{Im}(\alpha)")
 ax3 = Axis(fig[2, 2], xticks=-10:10:10, yticks=-10:10:10, xminorticksvisible=true, yminorticksvisible=true, xlabel = L"\mathrm{Re}(\alpha)")
 ax4 = Axis(fig[2, 3], xticks=-10:10:10, yticks=-10:10:10, xminorticksvisible=true, yminorticksvisible=true, xlabel = L"\mathrm{Re}(\alpha)")
-# labelx = Label(fig[2, :], L"\mathrm{Re}(\alpha)")
 
 
 lines!(ax1, tlist, real.(sol.expect[1, :]), label="Full", color=full_case_color)
@@ -300,18 +234,18 @@ lines!(ax1, tlist, real.(sol_dsf.expect[1, :]), label="DSF", linestyle=:dash, co
 # lines!(ax1, sol_qc.t, real.(sol_qc[a₁'*a₁]), label="QC", linestyle=:dashdot, color=qc_case_color)
 # lines!(ax1, tlist, abs2.(sol.expect[2, :]))
 # vlines!(ax1, [2.6], color=:red)
-scatter!(ax1, tlist_save, real.(qt.expect(a0'*a0, sol.states)), color=:grey, markersize=5, marker=:rect)
-lines!(ax1, fill(tlist_save[1], 2), [0, real(qt.expect(a0'*a0, sol.states[1]))], color=:grey, linestyle=:dash, linewidth=1)
-lines!(ax1, fill(tlist_save[2], 2), [0, real(qt.expect(a0'*a0, sol.states[2]))], color=:grey, linestyle=:dash, linewidth=1)
-lines!(ax1, fill(tlist_save[3], 2), [0, real(qt.expect(a0'*a0, sol.states[3]))], color=:grey, linestyle=:dash, linewidth=1)
+scatter!(ax1, tlist_save, real.(expect(a0'*a0, sol.states)), color=:grey, markersize=5, marker=:rect)
+lines!(ax1, fill(tlist_save[1], 2), [0, real(expect(a0'*a0, sol.states[1]))], color=:grey, linestyle=:dash, linewidth=1)
+lines!(ax1, fill(tlist_save[2], 2), [0, real(expect(a0'*a0, sol.states[2]))], color=:grey, linestyle=:dash, linewidth=1)
+lines!(ax1, fill(tlist_save[3], 2), [0, real(expect(a0'*a0, sol.states[3]))], color=:grey, linestyle=:dash, linewidth=1)
 
-axislegend(ax1, orientation=:horizontal, position=:cb)
+axislegend(ax1, orientation=:horizontal, position=:cb, padding=0)
 
 
 # heatmap!(ax2, xvec, yvec, Array(wigner(fock(N0, 70), xvec_gpu, yvec_gpu))', rasterize=true, colorrange=(-vmax1, vmax1), colormap=:balance, interpolate=true)
-heatmap!(ax2, xvec, yvec, wig1', rasterize=true, colorrange=(-vmax1, vmax1), colormap=:balance, interpolate=true)
-heatmap!(ax3, xvec, yvec, wig2', rasterize=true, colorrange=(-vmax2, vmax2), colormap=:balance, interpolate=true)
-heatmap!(ax4, xvec, yvec, wig3', rasterize=true, colorrange=(-vmax3, vmax3), colormap=:balance, interpolate=true)
+heatmap!(ax2, xvec, yvec, wig1', rasterize=2, colorrange=(-vmax1, vmax1), colormap=:balance, interpolate=true)
+heatmap!(ax3, xvec, yvec, wig2', rasterize=2, colorrange=(-vmax2, vmax2), colormap=:balance, interpolate=true)
+heatmap!(ax4, xvec, yvec, wig3', rasterize=2, colorrange=(-vmax3, vmax3), colormap=:balance, interpolate=true)
 
 # contour!(ax2, xvec, yvec, wig1', levels=25, colorrange=(-vmax1, vmax1), colormap=:balance)
 # contour!(ax3, xvec, yvec, wig2', levels=25, colorrange=(-vmax2, vmax2), colormap=:balance)
@@ -348,10 +282,10 @@ rowgap!(fig.layout, 20)
 
 
 
-text!(ax1, 0, 1, text = "(a)", align = (:left, :top), offset = (3, -2), space = :relative, font=:bold)
-text!(ax2, 0, 1, text = "(b)", align = (:left, :top), offset = (3, -2), space = :relative, font=:bold)
-text!(ax3, 0, 1, text = "(c)", align = (:left, :top), offset = (3, -2), space = :relative, font=:bold)
-text!(ax4, 0, 1, text = "(d)", align = (:left, :top), offset = (3, -2), space = :relative, font=:bold)
+text!(ax1, 0, 1, text = "(a)", align = (:left, :top), offset = (2, -1), space = :relative, font=:bold)
+text!(ax2, 0, 1, text = "(b)", align = (:left, :top), offset = (2, -1), space = :relative, font=:bold)
+text!(ax3, 0, 1, text = "(c)", align = (:left, :top), offset = (2, -1), space = :relative, font=:bold)
+text!(ax4, 0, 1, text = "(d)", align = (:left, :top), offset = (2, -1), space = :relative, font=:bold)
 
 
 
@@ -380,9 +314,7 @@ poly!(fig.scene, collect(zip(poly_x, poly_y)); poly_kwargs...)
 
 # translate!(prova_scatter, 0, 0, 1)
 
-# save(joinpath(data_folder, "DSF_master_equation.pdf"), fig, pt_per_unit=1)
-
-save("../figures/dynamical_shifted_fock.pdf", fig, pt_per_unit=1)
+save(joinpath(@__DIR__, "../figures/dynamical_shifted_fock.pdf"), fig, pt_per_unit=1)
 
 fig
 
