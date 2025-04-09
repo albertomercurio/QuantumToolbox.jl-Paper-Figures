@@ -179,24 +179,24 @@ for (i, m) in enumerate(mesolve_times_N_gpu)
 end
 
 # Labels
-text!(ax_mesolve, 0.0, 1.0, text = "(a)", align = (:left, :top), space = :relative, offset=(3, -3))
-text!(ax_mcsolve, 0.0, 1.0, text = "(b)", align = (:left, :top), space = :relative, offset=(3, -3))
-text!(ax_smesolve, 0.0, 1.0, text = "(c)", align = (:left, :top), space = :relative, offset=(3, -3))
-text!(ax_mesolve_vs_N_cpu, 0.0, 1.0, text = "(d)", align = (:left, :top), space = :relative, offset=(3, -3))
-text!(ax_mesolve_vs_N_gpu, 0.0, 1.0, text = "(e)", align = (:left, :top), space = :relative, offset=(3, -3))
+text!(ax_mesolve, 0.0, 1.0, text = "(a)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
+text!(ax_mcsolve, 0.0, 1.0, text = "(b)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
+text!(ax_smesolve, 0.0, 1.0, text = "(c)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
+text!(ax_mesolve_vs_N_cpu, 0.0, 1.0, text = "(d)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
+text!(ax_mesolve_vs_N_gpu, 0.0, 1.0, text = "(e)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
 
-text!(ax_mesolve, 0.5, 1.0, text = "mesolve", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
-text!(ax_mcsolve, 0.5, 1.0, text = "mcsolve", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
-text!(ax_smesolve, 0.5, 1.0, text = "smesolve", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
-text!(ax_mesolve_vs_N_cpu, 0.5, 1.0, text = "mesolve (CPU)", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
-text!(ax_mesolve_vs_N_gpu, 0.5, 1.0, text = "mesolve (GPU)", align = (:right, :top), space = :relative, offset=(-10, 0), font=:bold)
+text!(ax_mesolve, 0.5, 1.0, text = "mesolve", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
+text!(ax_mcsolve, 0.5, 1.0, text = "mcsolve", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
+text!(ax_smesolve, 0.5, 1.0, text = "smesolve", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
+text!(ax_mesolve_vs_N_cpu, 0.5, 1.0, text = "mesolve (CPU)", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
+text!(ax_mesolve_vs_N_gpu, 0.5, 1.0, text = "mesolve (GPU)", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
 
 rowgap!(fig.layout, 5)
 colgap!(grid_me_mc_sme, 7)
 colgap!(grid_me_vs_N, 5)
 
 # For the LaTeX document
-# save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
+save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
 
 # For the README file in the GitHub repository
 # Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
