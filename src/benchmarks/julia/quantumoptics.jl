@@ -137,4 +137,27 @@ open(output_path, "w") do file
     JSON.print(file, results)
 end
 
+# %% [markdown]
+
+# Varying the Hilbert space dimension $N$
+
 # %%
+
+N_list = floor.(Int, range(10, 400, 25))
+
+quantumoptics_mesolve_N_cpu = map(enumerate(N_list)) do (i, N)
+    println(i)
+
+    quantumoptics_mesolve(N)
+end
+
+# Save the results to a JSON file
+
+results = Dict(
+    "quantumoptics_mesolve_N_cpu" => quantumoptics_mesolve_N_cpu,
+)
+
+output_path = joinpath(@__DIR__, "quantumoptics_benchmark_results_N.json")
+open(output_path, "w") do file
+    JSON.print(file, results)
+end

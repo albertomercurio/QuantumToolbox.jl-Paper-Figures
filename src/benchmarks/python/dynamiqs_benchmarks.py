@@ -42,7 +42,7 @@ def dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100):
     # Define the statement to benchmark
     def solve():
         dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options).expects
-    
+
     # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
     times = timeit.repeat(solve, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
 
@@ -119,7 +119,7 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 benchmark_results = {
     "dynamiqs_mesolve": dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100),
     # "dynamiqs_ssesolve": dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=10), Not yet implemented
-    "dynamiqs_smesolve": dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
+    "dynamiqs_smesolve": dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=5),
 }
 
 # %%
