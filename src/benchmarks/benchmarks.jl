@@ -175,10 +175,10 @@ hidexdecorations!(ax_smesolve)
 
 # Hilbert space dimension N plots
 
-for (i, m) in enumerate(mesolve_times_N_cpu)
+for (i, m) in Iterators.reverse(enumerate(mesolve_times_N_cpu))
     scatterlines!(ax_mesolve_vs_N_cpu, N_list[4:end], m[4:end], color=colors[i], marker=markers[i])
 end
-for (i, m) in enumerate(mesolve_times_N_gpu)
+for (i, m) in Iterators.reverse(enumerate(mesolve_times_N_gpu))
     scatterlines!(ax_mesolve_vs_N_gpu, N_list[4:length(m)], m[4:end], color=colors[[1,3,4]][i], marker=markers[[1,3,4]][i])
 end
 
@@ -200,7 +200,7 @@ colgap!(grid_me_mc_sme, 7)
 colgap!(grid_me_vs_N, 5)
 
 # For the LaTeX document
-# save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
+save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
 
 # For the README file in the GitHub repository
 # Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
