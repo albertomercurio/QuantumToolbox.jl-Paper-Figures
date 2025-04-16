@@ -260,7 +260,7 @@ lines!(ax_se, tlist, real(res_se.expect[1, :]), color=:dodgerblue4)
 
 lines!(ax_me, tlist, real(res_me.expect[1, :]), color=:dodgerblue4)
 lines!(ax_me, tlist, exp.(-κ * tlist), color=:dimgray, linestyle=:dash, linewidth=1.25)
-text!(ax_me, 40, 0.7, text=L"e^{-\kappa t}", color=:dimgray, fontsize=9)
+text!(ax_me, 40, 0.7, text=L"e^{-\kappa t}", color=:black, fontsize=10, alpha=0.9)
 
 lines!(ax_mc, tlist, real(res_mc.expect[1, :]), color=:dodgerblue4, label="100 Traj.")
 lines!(ax_mc, tlist, real(res_mc.runs_expect[1, 11, :]), color=:lightsteelblue, linewidth=1.25, linestyle=:dash, label="1 Traj.")

@@ -7,17 +7,6 @@ include("_cairomakie_setup.jl")
 
 # %%
 
-using ChainRulesCore
-
-function ChainRulesCore.rrule(::Type{QuantumObject}, data, type, dimensions)
-     obj = QuantumObject(data, type, dimensions)
-     f_pullback(Δobj) = (NoTangent(), Δobj.data, NoTangent(), NoTangent())
-     f_pullback(Δobj_data::AbstractArray) = (NoTangent(), Δobj_data, NoTangent(), NoTangent())
-     return obj, f_pullback
- end
-
-# %%
-
 const N = 20
 const a = destroy(N)
 const γ = 1.0
@@ -71,7 +60,7 @@ deriv_analytical_Δ = map(Δ_list) do Δ
 end
 
 deriv_numerical_Δ = map(Δ_list) do Δ
-    Zygote.gradient(my_f_mesolve, [Δ, F])[1][1] / 2
+    Zygote.gradient(my_f_mesolve, [Δ, F])[1][1]
 end
 
 # %%
