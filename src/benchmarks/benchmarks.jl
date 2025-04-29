@@ -101,9 +101,9 @@ smesolve_times_x = [1,2,3,4]
 
 # %%
 
-fig = Figure(size=(plot_figsize_width_pt, plot_figsize_width_pt*0.6))
+fig = Figure(size=(plot_figsize_width_pt, plot_figsize_width_pt*0.65))
 
-grid_plots = fig[2, 1]
+grid_plots = fig[2, 1] = GridLayout()
 grid_me_mc_sme = grid_plots[1, 1] = GridLayout()
 grid_me_vs_N = grid_plots[2, 1] = GridLayout()
 
@@ -199,8 +199,10 @@ rowgap!(fig.layout, 5)
 colgap!(grid_me_mc_sme, 7)
 colgap!(grid_me_vs_N, 5)
 
+rowsize!(grid_plots, 2, Relative(0.55))
+
 # For the LaTeX document
-save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
+# save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
 
 # For the README file in the GitHub repository
 # Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)

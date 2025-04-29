@@ -263,7 +263,7 @@ lines!(ax_me, tlist, exp.(-κ * tlist), color=:dimgray, linestyle=:dash, linewid
 text!(ax_me, 40, 0.7, text=L"e^{-\kappa t}", color=:black, fontsize=10, alpha=0.9)
 
 lines!(ax_mc, tlist, real(res_mc.expect[1, :]), color=:dodgerblue4, label="100 Traj.")
-lines!(ax_mc, tlist, real(res_mc.runs_expect[1, 11, :]), color=:lightsteelblue, linewidth=1.25, linestyle=:dash, label="1 Traj.")
+lines!(ax_mc, tlist, real(res_mc.runs_expect[1, 11, :]), color=Makie.wong_colors()[5], linewidth=1.25, linestyle=:dash, label="1 Traj.")
 
 lines!(ax_td, tlist2, real(res_me_td.expect[1, :]), color=:dodgerblue4, label="Master Eq.")
 hlines!(ax_td, [expect_ss_td_1], color=:crimson, linestyle=:dash, label=L"n_\mathrm{max} = 1")

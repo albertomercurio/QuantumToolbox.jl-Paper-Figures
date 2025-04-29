@@ -11,6 +11,7 @@ N = 20      # Fock space dimension
 ωq = 5      # qubit resonance frequency
 g = 0.1     # coupling strength
 κ = 1       # cavity decay rate
+κφ = 0.3    # cavity dephasing rate
 γ = 2       # qubit decay rate
 α = 2       # coherence of initial state
 ntraj = 500 # number of trajectories
@@ -51,7 +52,7 @@ measurement_sse_avg = dropdims(measurement_sse_avg, dims=2)
 # %%
 
 # Including qubit losses
-c_ops  = [√(γ) * σm]
+c_ops  = [√(γ) * σm, √(κφ) * a' * a]
 
 sme_sol = smesolve(
     H,
