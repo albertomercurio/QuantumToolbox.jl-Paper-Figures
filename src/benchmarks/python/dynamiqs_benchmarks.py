@@ -48,10 +48,10 @@ def dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100):
 
     return [t * 1e9 for t in times[1:]]  # List of times in nanoseconds
 
-def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
+def dynamiqs_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     a = dynamiqs.destroy(N)
     H = Δ * a.dag() @ a - U/2 * a.dag() @ a.dag() @ a @ a + F * (a + a.dag())
-    sc_ops = [jnp.sqrt(γ * (1 + nth)) * a]
+    c_ops = [jnp.sqrt(γ * (1 + nth)) * a]
 
     tlist = jnp.arange(0, 10, stoc_dt*20)
     ψ0 = dynamiqs.fock(N, 0)
@@ -60,20 +60,19 @@ def dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
     key = jax.random.PRNGKey(20)
     keys = jax.random.split(key, ntraj)
 
-    method = dynamiqs.method.EulerMaruyama(dt=stoc_dt)
-    options = dynamiqs.Options(progress_meter = False, save_states=False)
+    options = dynamiqs.Options(save_states=False)
 
-    sol_sse = dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], method=method, options=options) # Warm-up
-    sol_me = dynamiqs.mesolve(H, sc_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options)
+    sol_mc = dynamiqs.jssesolve(H, c_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], options=options) # Warm-up
+    sol_me = dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options)
     # Test if the two methods give the same result up to sol tolerance
-    expect_sse = jnp.sum(sol_sse.expects, axis=0)[0,:] / ntraj
+    expect_sse = jnp.sum(sol_mc.expects, axis=0)[0,:] / ntraj
     convergence_metric = jnp.sum(jnp.abs(expect_sse - sol_me.expects[0,:])) / len(tlist)
     print(f"ssesolve convergenge check. {convergence_metric} should be smaller than 0.1")
     assert jnp.allclose(expect_sse, sol_me.expects[0,:], atol=1e-1 * len(tlist))
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.dssesolve(H, sc_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], method=method, options=options).expects
+        dynamiqs.jssesolve(H, c_ops, ψ0, tlist, keys, exp_ops=[a.dag() @ a], options=options).expects
     
     # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
     times = timeit.repeat(solve, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
@@ -118,7 +117,7 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 # Benchmark all cases
 benchmark_results = {
     "dynamiqs_mesolve": dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100),
-    # "dynamiqs_ssesolve": dynamiqs_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=10), Not yet implemented
+    "dynamiqs_mcsolve": dynamiqs_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
     "dynamiqs_smesolve": dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=5),
 }
 
