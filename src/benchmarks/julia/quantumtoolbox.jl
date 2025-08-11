@@ -134,7 +134,7 @@ end
 
 # %%
 
-N_list = floor.(Int, range(10, 400, 25))
+N_list = floor.(Int, range(10, 800, 10))
 
 pr = ProgressBar(length(N_list))
 quantumtoolbox_mesolve_N_cpu = map(N_list) do N

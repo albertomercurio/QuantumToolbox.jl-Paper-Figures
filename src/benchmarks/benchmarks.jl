@@ -79,7 +79,7 @@ mesolve_quantumoptics_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumopt
 mesolve_quantumtoolbox_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N["quantumtoolbox_mesolve_N_cpu"]),)
 mesolve_quantumtoolbox_N_gpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N["quantumtoolbox_mesolve_N_gpu"]),)
 
-N_list = floor.(Int, range(10, 400, 25))
+N_list = floor.(Int, range(10, 800, 10))
 
 mesolve_times_N_cpu = [
     [1e-9 * sum(mm) / length(mm) for mm in m.times] for
