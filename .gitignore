@@ -3,3 +3,4 @@ pyenv/
 /_site/
 /_freeze
 *.ipynb
+*.out

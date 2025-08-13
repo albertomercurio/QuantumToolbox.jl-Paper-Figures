@@ -145,32 +145,32 @@ N_list = np.floor(np.linspace(10, 800, 10)).astype(int)
 
 dynamiqs_mesolve_N_cpu = []
 for N in tqdm(N_list):
-    num_repeats = 100
+    num_repeats = 40
     if N > 50:
-        num_repeats = 40
+        num_repeats = 20
     if N > 100:
         num_repeats = 10
     if N > 200:
         num_repeats = 2
     dynamiqs_mesolve_N_cpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
 
-dynamiqs.set_device("gpu")
+# dynamiqs.set_device("gpu")
 
-dynamiqs_mesolve_N_gpu = []
-# In this way it is safe if it fails due to lack of GPU memory
-for N in tqdm(N_list):
-    num_repeats = 100
-    if N > 50:
-        num_repeats = 40
-    if N > 100:
-        num_repeats = 10
-    if N > 200:
-        num_repeats = 2
-    dynamiqs_mesolve_N_gpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+# dynamiqs_mesolve_N_gpu = []
+# # In this way it is safe if it fails due to lack of GPU memory
+# for N in tqdm(N_list):
+#     num_repeats = 100
+#     if N > 50:
+#         num_repeats = 40
+#     if N > 100:
+#         num_repeats = 10
+#     if N > 200:
+#         num_repeats = 2
+#     dynamiqs_mesolve_N_gpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
 
 benchmark_results_N = {
     "dynamiqs_mesolve_N_cpu": dynamiqs_mesolve_N_cpu,
-    "dynamiqs_mesolve_N_gpu": dynamiqs_mesolve_N_gpu,
+    # "dynamiqs_mesolve_N_gpu": dynamiqs_mesolve_N_gpu,
 }
 
 # %%

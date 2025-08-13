@@ -1,9 +1,9 @@
 using QuantumToolbox
 using BenchmarkTools
 using JSON
-using CUDA
-using CUDA.CUSPARSE
-CUDA.allowscalar(false)
+# using CUDA
+# using CUDA.CUSPARSE
+# CUDA.allowscalar(false)
 
 # %% [markdown]
 
@@ -143,18 +143,18 @@ quantumtoolbox_mesolve_N_cpu = map(N_list) do N
     quantumtoolbox_mesolve(N)
 end
 
-pr = ProgressBar(length(N_list))
-quantumtoolbox_mesolve_N_gpu = map(N_list) do N
-    next!(pr)
+# pr = ProgressBar(length(N_list))
+# quantumtoolbox_mesolve_N_gpu = map(N_list) do N
+#     next!(pr)
 
-    quantumtoolbox_mesolve_gpu(N)
-end
+#     quantumtoolbox_mesolve_gpu(N)
+# end
 
 # Save the results to a JSON file
 
 results = Dict(
     "quantumtoolbox_mesolve_N_cpu" => quantumtoolbox_mesolve_N_cpu,
-    "quantumtoolbox_mesolve_N_gpu" => quantumtoolbox_mesolve_N_gpu,
+    # "quantumtoolbox_mesolve_N_gpu" => quantumtoolbox_mesolve_N_gpu,
 )
 
 output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results_N.json")

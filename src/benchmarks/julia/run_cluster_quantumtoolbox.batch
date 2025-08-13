@@ -1,0 +1,27 @@
+#!/bin/bash -l
+#SBATCH --job-name=quantumtoolbox-benchmarks
+#SBATCH --output=output_quantumtoolbox.out
+#SBATCH --error=error_quantumtoolbox.out
+#SBATCH --time=07:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=0
+#SBATCH --account=go54
+#SBATCH --partition=normal
+#SBATCH --uenv=julia/25.5:v1
+#SBATCH --view=juliaup
+
+export JULIA_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+
+cd $HOME/GitHub/QuantumToolbox.jl-Paper-Figures
+
+# Instantiate Julia environment
+echo "Instantiating Julia environment..."
+julia --project -e 'using Pkg; Pkg.instantiate()'
+echo "Julia environment instantiated."
+
+# Run Julia script
+echo "Running Julia script..."
+stdbuf -oL -eL julia --project src/benchmarks/julia/quantumtoolbox.jl
+echo "Julia script completed."

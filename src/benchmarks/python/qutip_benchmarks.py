@@ -213,9 +213,9 @@ def qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=100):
 # Benchmark all cases
 benchmark_results = {
     "qutip_mesolve": qutip_mesolve(N, Δ, F, γ, nth, num_repeats=100),
-    "qutip_mcsolve": qutip_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
-    "qutip_ssesolve": qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
-    "qutip_smesolve": qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
+    "qutip_mcsolve": qutip_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
+    # "qutip_ssesolve": qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
+    "qutip_smesolve": qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=5),
 }
 
 # %%
@@ -235,9 +235,9 @@ N_list = np.floor(np.linspace(10, 800, 10)).astype(int)
 
 qutip_mesolve_N_cpu = []
 for N in tqdm(N_list):
-    num_repeats = 100
+    num_repeats = 40
     if N > 50:
-        num_repeats = 40
+        num_repeats = 20
     if N > 100:
         num_repeats = 10
     if N > 200:
@@ -248,24 +248,24 @@ for N in tqdm(N_list):
         print(f"Failed for N={N} with error: {e}")
         break
 
-qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
-for N in tqdm(N_list):
-    num_repeats = 40
-    if N > 50:
-        num_repeats = 20
-    if N > 100:
-        num_repeats = 10
-    if N > 200:
-        num_repeats = 2
-    try:
-        qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=num_repeats))
-    except Exception as e:
-        print(f"Failed for N={N} with error: {e}")
-        break
+# qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
+# for N in tqdm(N_list):
+#     num_repeats = 40
+#     if N > 50:
+#         num_repeats = 20
+#     if N > 100:
+#         num_repeats = 10
+#     if N > 200:
+#         num_repeats = 2
+#     try:
+#         qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=num_repeats))
+#     except Exception as e:
+#         print(f"Failed for N={N} with error: {e}")
+#         break
 
 benchmark_results_N = {
     "qutip_mesolve_N_cpu": qutip_mesolve_N_cpu,
-    "qutip_mesolve_N_gpu": qutip_mesolve_N_gpu,
+    # "qutip_mesolve_N_gpu": qutip_mesolve_N_gpu,
 }
 
 # %%
