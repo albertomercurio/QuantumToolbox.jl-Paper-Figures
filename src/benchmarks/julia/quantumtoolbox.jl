@@ -1,9 +1,8 @@
 using QuantumToolbox
 using BenchmarkTools
 using JSON
-# using CUDA
-# using CUDA.CUSPARSE
-# CUDA.allowscalar(false)
+
+run_gpu = get(ENV, "RUN_GPU_BENCHMARK", "false") == "true"
 
 # %% [markdown]
 
@@ -111,53 +110,64 @@ end
 
 # %%
 
-result_mesolve = quantumtoolbox_mesolve(N)
-result_mcsolve = quantumtoolbox_mcsolve(N)
-result_smesolve = quantumtoolbox_smesolve(N)
-
-# Save the results to a JSON file
-
-results = Dict(
-    "quantumtoolbox_mesolve" => result_mesolve,
-    "quantumtoolbox_mcsolve" => result_mcsolve,
-    "quantumtoolbox_smesolve" => result_smesolve,
-)
-
-output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results.json")
-open(output_path, "w") do file
-    JSON.print(file, results)
-end
-
-# %% [markdown]
-
-# Varying the Hilbert space dimension $N$
-
-# %%
-
 N_list = floor.(Int, range(10, 800, 10))
 
-pr = ProgressBar(length(N_list))
-quantumtoolbox_mesolve_N_cpu = map(N_list) do N
-    next!(pr)
+if !run_gpu
+    result_mesolve = quantumtoolbox_mesolve(N)
+    result_mcsolve = quantumtoolbox_mcsolve(N)
+    result_smesolve = quantumtoolbox_smesolve(N)
 
-    quantumtoolbox_mesolve(N)
+    # Save the results to a JSON file
+
+    results = Dict(
+        "quantumtoolbox_mesolve" => result_mesolve,
+        "quantumtoolbox_mcsolve" => result_mcsolve,
+        "quantumtoolbox_smesolve" => result_smesolve,
+    )
+
+    output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results.json")
+    open(output_path, "w") do file
+        JSON.print(file, results)
+    end
+
+    pr = ProgressBar(length(N_list))
+    quantumtoolbox_mesolve_N_cpu = map(N_list) do N
+        res = quantumtoolbox_mesolve(N)
+        next!(pr)
+        res
+    end
+
+    # Save the results to a JSON file
+
+    results = Dict(
+        "quantumtoolbox_mesolve_N_cpu" => quantumtoolbox_mesolve_N_cpu,
+    )
+
+    output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results_N_cpu.json")
+    open(output_path, "w") do file
+        JSON.print(file, results)
+    end
+else
+    using CUDA
+    using CUDA.CUSPARSE
+    CUDA.allowscalar(false)
+
+    pr = ProgressBar(length(N_list))
+    quantumtoolbox_mesolve_N_gpu = map(N_list) do N
+        res = quantumtoolbox_mesolve_gpu(N)
+        next!(pr)
+        res
+    end
+
+    # Save the results to a JSON file
+
+    results = Dict(
+        "quantumtoolbox_mesolve_N_gpu" => quantumtoolbox_mesolve_N_gpu,
+    )
+
+    output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results_N_gpu.json")
+    open(output_path, "w") do file
+        JSON.print(file, results)
+    end
 end
 
-# pr = ProgressBar(length(N_list))
-# quantumtoolbox_mesolve_N_gpu = map(N_list) do N
-#     next!(pr)
-
-#     quantumtoolbox_mesolve_gpu(N)
-# end
-
-# Save the results to a JSON file
-
-results = Dict(
-    "quantumtoolbox_mesolve_N_cpu" => quantumtoolbox_mesolve_N_cpu,
-    # "quantumtoolbox_mesolve_N_gpu" => quantumtoolbox_mesolve_N_gpu,
-)
-
-output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results_N.json")
-open(output_path, "w") do file
-    JSON.print(file, results)
-end

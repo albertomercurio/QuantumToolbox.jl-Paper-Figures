@@ -10,6 +10,7 @@ from tqdm import tqdm
 import os
 
 num_threads = int(os.getenv("JULIA_NUM_THREADS", int(os.cpu_count() / 2)))
+run_gpu = os.getenv("RUN_GPU_BENCHMARK", "False") == "True"
 
 # %% [markdown]
 
@@ -210,70 +211,75 @@ def qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=100):
 
 # %%
 
-# Benchmark all cases
-benchmark_results = {
-    "qutip_mesolve": qutip_mesolve(N, Δ, F, γ, nth, num_repeats=100),
-    "qutip_mcsolve": qutip_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
-    # "qutip_ssesolve": qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
-    "qutip_smesolve": qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=5),
-}
-
-# %%
-
-print("Saving results to JSON...")
-
-# Save results to JSON
-with open("src/benchmarks/python/qutip_benchmark_results.json", "w") as f:
-    json.dump(benchmark_results, f, indent=4)
-
-# %% [markdown]
-# Varying the Hilbert space dimension $N$
-
-# %%
-
 N_list = np.floor(np.linspace(10, 800, 10)).astype(int)
+    
+if not run_gpu:
+    # Benchmark all cases
+    benchmark_results = {
+        "qutip_mesolve": qutip_mesolve(N, Δ, F, γ, nth, num_repeats=100),
+        "qutip_mcsolve": qutip_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
+        # "qutip_ssesolve": qutip_ssesolve(N, Δ, F, γ, nth, ntraj, num_repeats=20),
+        "qutip_smesolve": qutip_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=5),
+    }
 
-qutip_mesolve_N_cpu = []
-for N in tqdm(N_list):
-    num_repeats = 40
-    if N > 50:
-        num_repeats = 20
-    if N > 100:
-        num_repeats = 10
-    if N > 200:
-        num_repeats = 2
-    try:
-        qutip_mesolve_N_cpu.append(qutip_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
-    except Exception as e:
-        print(f"Failed for N={N} with error: {e}")
-        break
+    # %%
 
-# qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
-# for N in tqdm(N_list):
-#     num_repeats = 40
-#     if N > 50:
-#         num_repeats = 20
-#     if N > 100:
-#         num_repeats = 10
-#     if N > 200:
-#         num_repeats = 2
-#     try:
-#         qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=num_repeats))
-#     except Exception as e:
-#         print(f"Failed for N={N} with error: {e}")
-#         break
+    print("Saving results to JSON...")
 
-benchmark_results_N = {
-    "qutip_mesolve_N_cpu": qutip_mesolve_N_cpu,
-    # "qutip_mesolve_N_gpu": qutip_mesolve_N_gpu,
-}
+    # Save results to JSON
+    with open("src/benchmarks/python/qutip_benchmark_results.json", "w") as f:
+        json.dump(benchmark_results, f, indent=4)
 
-# %%
+    qutip_mesolve_N_cpu = []
+    for N in tqdm(N_list):
+        num_repeats = 40
+        if N > 50:
+            num_repeats = 20
+        if N > 100:
+            num_repeats = 10
+        if N > 200:
+            num_repeats = 2
+        try:
+            qutip_mesolve_N_cpu.append(qutip_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+        except Exception as e:
+            print(f"Failed for N={N} with error: {e}")
+            break
 
-print("Saving results to JSON...")
-# Save results to JSON
+    benchmark_results_N = {
+        "qutip_mesolve_N_cpu": qutip_mesolve_N_cpu,
+    }
 
-with open("src/benchmarks/python/qutip_benchmark_results_N.json", "w") as f:
-    json.dump(benchmark_results_N, f, indent=4)
+    # %%
 
-# %%
+    print("Saving results to JSON...")
+    # Save results to JSON
+
+    with open("src/benchmarks/python/qutip_benchmark_results_N_cpu.json", "w") as f:
+        json.dump(benchmark_results_N, f, indent=4)
+else:
+    qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
+    for N in tqdm(N_list):
+        num_repeats = 40
+        if N > 50:
+            num_repeats = 20
+        if N > 100:
+            num_repeats = 10
+        if N > 200:
+            num_repeats = 2
+        try:
+            qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, Δ, F, γ, nth, num_repeats=num_repeats))
+        except Exception as e:
+            print(f"Failed for N={N} with error: {e}")
+            break
+
+    benchmark_results_N = {
+        "qutip_mesolve_N_gpu": qutip_mesolve_N_gpu,
+    }
+
+    # %%
+
+    print("Saving results to JSON...")
+    # Save results to JSON
+
+    with open("src/benchmarks/python/qutip_benchmark_results_N_gpu.json", "w") as f:
+        json.dump(benchmark_results_N, f, indent=4)

@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH --job-name=qutip-benchmarks
-#SBATCH --output=output_qutip.out
-#SBATCH --error=error_qutip.out
+#SBATCH --output=output_qutip_cpu.out
+#SBATCH --error=error_qutip_cpu.out
 #SBATCH --time=07:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -14,8 +14,7 @@
 
 export JULIA_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export PYTHONUNBUFFERED=1
-
-# unset LD_LIBRARY_PATH
+export RUN_GPU_BENCHMARK=False
 
 cd $HOME/GitHub/QuantumToolbox.jl-Paper-Figures
 

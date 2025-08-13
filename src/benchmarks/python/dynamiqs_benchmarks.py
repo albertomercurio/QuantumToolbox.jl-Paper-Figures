@@ -6,9 +6,11 @@ import dynamiqs
 import timeit
 from tqdm import tqdm
 import json
+import os
 
 dynamiqs.set_device("cpu")
 dynamiqs.set_precision("double") # Set the same precision as the others
+run_gpu = os.getenv("RUN_GPU_BENCHMARK", "False") == "True"
 
 # %% [markdown]
 
@@ -121,63 +123,74 @@ def dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=100):
 
 # %%
 
-# Benchmark all cases
-benchmark_results = {
-    "dynamiqs_mesolve": dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100),
-    "dynamiqs_mcsolve": dynamiqs_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
-    "dynamiqs_smesolve": dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=5),
-}
+N_list = np.floor(np.linspace(10, 800, 10)).astype(int) 
 
-# %%
+if not run_gpu:
+    # Benchmark all cases
+    benchmark_results = {
+        "dynamiqs_mesolve": dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100),
+        "dynamiqs_mcsolve": dynamiqs_mcsolve(N, Δ, F, γ, nth, ntraj, num_repeats=10),
+        "dynamiqs_smesolve": dynamiqs_smesolve(N, Δ, F, γ, nth, ntraj, num_repeats=5),
+    }
 
-print("Saving results to JSON...")
+    # %%
 
-# Save results to JSON
-with open("src/benchmarks/python/dynamiqs_benchmark_results.json", "w") as f:
-    json.dump(benchmark_results, f, indent=4)
-# %% [markdown]
+    print("Saving results to JSON...")
 
-# Varying the Hilbert space dimension
+    # Save results to JSON
+    with open("src/benchmarks/python/dynamiqs_benchmark_results.json", "w") as f:
+        json.dump(benchmark_results, f, indent=4)
+    # %% [markdown]
 
-# %%
+    # Varying the Hilbert space dimension
 
-N_list = np.floor(np.linspace(10, 800, 10)).astype(int)
+    # %%
 
-dynamiqs_mesolve_N_cpu = []
-for N in tqdm(N_list):
-    num_repeats = 40
-    if N > 50:
-        num_repeats = 20
-    if N > 100:
-        num_repeats = 10
-    if N > 200:
-        num_repeats = 2
-    dynamiqs_mesolve_N_cpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+    dynamiqs_mesolve_N_cpu = []
+    for N in tqdm(N_list):
+        num_repeats = 40
+        if N > 50:
+            num_repeats = 20
+        if N > 100:
+            num_repeats = 10
+        if N > 200:
+            num_repeats = 2
+        dynamiqs_mesolve_N_cpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
 
-# dynamiqs.set_device("gpu")
+    benchmark_results_N = {
+        "dynamiqs_mesolve_N_cpu": dynamiqs_mesolve_N_cpu,
+    }
 
-# dynamiqs_mesolve_N_gpu = []
-# # In this way it is safe if it fails due to lack of GPU memory
-# for N in tqdm(N_list):
-#     num_repeats = 100
-#     if N > 50:
-#         num_repeats = 40
-#     if N > 100:
-#         num_repeats = 10
-#     if N > 200:
-#         num_repeats = 2
-#     dynamiqs_mesolve_N_gpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
+    # %%
 
-benchmark_results_N = {
-    "dynamiqs_mesolve_N_cpu": dynamiqs_mesolve_N_cpu,
-    # "dynamiqs_mesolve_N_gpu": dynamiqs_mesolve_N_gpu,
-}
+    print("Saving results to JSON...")
+    # Save results to JSON
 
-# %%
+    with open("src/benchmarks/python/dynamiqs_benchmark_results_N_cpu.json", "w") as f:
+        json.dump(benchmark_results_N, f, indent=4)
+else:
+    dynamiqs.set_device("gpu")
 
-print("Saving results to JSON...")
-# Save results to JSON
+    dynamiqs_mesolve_N_gpu = []
+    # In this way it is safe if it fails due to lack of GPU memory
+    for N in tqdm(N_list):
+        num_repeats = 100
+        if N > 50:
+            num_repeats = 40
+        if N > 100:
+            num_repeats = 10
+        if N > 200:
+            num_repeats = 2
+        dynamiqs_mesolve_N_gpu.append(dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=num_repeats))
 
-with open("src/benchmarks/python/dynamiqs_benchmark_results_N.json", "w") as f:
-    json.dump(benchmark_results_N, f, indent=4)
-# %%
+    benchmark_results_N = {
+        "dynamiqs_mesolve_N_gpu": dynamiqs_mesolve_N_gpu,
+    }
+
+    # %%
+
+    print("Saving results to JSON...")
+    # Save results to JSON
+
+    with open("src/benchmarks/python/dynamiqs_benchmark_results_N_gpu.json", "w") as f:
+        json.dump(benchmark_results_N, f, indent=4)

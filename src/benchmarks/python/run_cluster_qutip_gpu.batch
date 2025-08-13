@@ -1,0 +1,28 @@
+#!/bin/bash -l
+#SBATCH --job-name=qutip-benchmarks-gpu
+#SBATCH --output=output_qutip_gpu.out
+#SBATCH --error=error_qutip_gpu.out
+#SBATCH --time=01:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=32
+#SBATCH --gpus-per-task=1
+#SBATCH --mem=0
+#SBATCH --account=go54
+#SBATCH --partition=normal
+#SBATCH --uenv=prgenv-gnu/24.11:v1
+#SBATCH --view=default
+
+export JULIA_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export PYTHONUNBUFFERED=1
+export RUN_GPU_BENCHMARK=True
+
+# Unset LD_LIBRARY_PATH due to this issue https://github.com/jax-ml/jax/issues/28929
+unset LD_LIBRARY_PATH
+
+cd $HOME/GitHub/QuantumToolbox.jl-Paper-Figures
+
+# Run Python script
+echo "Running Python script..."
+srun -u env -u LD_LIBRARY_PATH stdbuf -oL -eL $SCRATCH/quantumtoolbox-figures-gpu/bin/python src/benchmarks/python/qutip_benchmarks.py
+echo "Python script completed."
