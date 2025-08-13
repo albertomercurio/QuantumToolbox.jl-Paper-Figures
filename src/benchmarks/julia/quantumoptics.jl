@@ -1,6 +1,9 @@
 using QuantumOptics
+import QuantumToolbox: ProgressBar, next!
 using BenchmarkTools
 using JSON
+
+run_gpu = get(ENV, "RUN_GPU_BENCHMARK", "false") == "true"
 
 # %% [markdown]
 # Parameters:
@@ -116,48 +119,103 @@ function quantumoptics_smesolve(N)
     return benchmark_result.times
 end
 
-# %%
+function quantumoptics_mesolve_gpu(N)
+    bas = FockBasis(N)
+    a_cpu = destroy(bas)
 
-result_mesolve = quantumoptics_mesolve(N)
-result_mcsolve = quantumoptics_mcsolve(N)
-result_smesolve = quantumoptics_smesolve(N)
+    H_cpu = Δ * a_cpu' * a_cpu - U / 2 * a_cpu'^2 * a_cpu^2 + F * (a_cpu + a_cpu')
+    c_ops_cpu = [sqrt(γ * (1 + nth)) * a_cpu, sqrt(γ * nth) * a_cpu']
 
-# %%
+    tlist = range(0, 10, 100)
+    ψ0_cpu = fockstate(bas, 0)
 
-# Save the results to a JSON file
+    a = Operator(a_cpu.basis_l, a_cpu.basis_r, CuSparseMatrixCSR(a_cpu.data))
+    H = Operator(H_cpu.basis_l, H_cpu.basis_r, CuSparseMatrixCSR(H_cpu.data))
+    c_ops = [Operator(op.basis_l, op.basis_r, CuSparseMatrixCSR(op.data)) for op in c_ops_cpu]
+    ψ0 = Ket(ψ0_cpu.basis, CuVector(ψ0_cpu.data))
 
-results = Dict(
-    "quantumoptics_mesolve" => result_mesolve,
-    "quantumoptics_mcsolve" => result_mcsolve,
-    "quantumoptics_smesolve" => result_smesolve,
-)
+    f_out = (t, state) -> expect(a' * a, state)
 
-output_path = joinpath(@__DIR__, "quantumoptics_benchmark_results.json")
-open(output_path, "w") do file
-    JSON.print(file, results)
+    timeevolution.master(tlist[1:2], ψ0, H, c_ops, fout = f_out) # Warm-up
+
+    benchmark_result =
+        @benchmark timeevolution.master($tlist, $ψ0, $H, $c_ops, fout = $f_out, abstol = 1e-8, reltol = 1e-6)
+
+    return benchmark_result.times
 end
-
-# %% [markdown]
-
-# Varying the Hilbert space dimension $N$
 
 # %%
 
 N_list = floor.(Int, range(10, 800, 10))
 
-quantumoptics_mesolve_N_cpu = map(enumerate(N_list)) do (i, N)
-    println(i)
+if !run_gpu
+    result_mesolve = quantumoptics_mesolve(N)
+    result_mcsolve = quantumoptics_mcsolve(N)
+    result_smesolve = quantumoptics_smesolve(N)
 
-    quantumoptics_mesolve(N)
-end
+    # %%
 
-# Save the results to a JSON file
+    # Save the results to a JSON file
 
-results = Dict(
-    "quantumoptics_mesolve_N_cpu" => quantumoptics_mesolve_N_cpu,
-)
+    results = Dict(
+        "quantumoptics_mesolve" => result_mesolve,
+        "quantumoptics_mcsolve" => result_mcsolve,
+        "quantumoptics_smesolve" => result_smesolve,
+    )
 
-output_path = joinpath(@__DIR__, "quantumoptics_benchmark_results_N.json")
-open(output_path, "w") do file
-    JSON.print(file, results)
+    output_path = joinpath(@__DIR__, "quantumoptics_benchmark_results.json")
+    open(output_path, "w") do file
+        JSON.print(file, results)
+    end
+
+    # %% [markdown]
+
+    # Varying the Hilbert space dimension $N$
+
+    # %%
+
+    pr = ProgressBar(length(N_list))
+    quantumoptics_mesolve_N_cpu = map(N_list) do N
+        res = quantumoptics_mesolve(N)
+        next!(pr)
+        res
+    end
+
+    # Save the results to a JSON file
+
+    results = Dict(
+        "quantumoptics_mesolve_N_cpu" => quantumoptics_mesolve_N_cpu,
+    )
+
+    output_path = joinpath(@__DIR__, "quantumoptics_benchmark_results_N_cpu.json")
+    open(output_path, "w") do file
+        JSON.print(file, results)
+    end
+else
+    using CUDA
+    using CUDA.CUSPARSE
+    CUDA.allowscalar(false)
+
+    # Overloaded expect function for GPU support
+    function QuantumOptics.expect(op::DataOperator{B1,B2}, state::Operator{B2,B2, <:CuArray}) where {B1,B2}
+        return tr(op * state)
+    end
+
+    pr = ProgressBar(length(N_list))
+    quantumoptics_mesolve_N_gpu = map(N_list) do N
+        res = quantumoptics_mesolve_gpu(N)
+        next!(pr)
+        res
+    end
+
+    # Save the results to a JSON file
+
+    results = Dict(
+        "quantumoptics_mesolve_N_gpu" => quantumoptics_mesolve_N_gpu,
+    )
+
+    output_path = joinpath(@__DIR__, "quantumoptics_benchmark_results_N_gpu.json")
+    open(output_path, "w") do file
+        JSON.print(file, results)
+    end
 end

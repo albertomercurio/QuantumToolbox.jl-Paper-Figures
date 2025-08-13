@@ -38,12 +38,13 @@ def dynamiqs_mesolve(N, Δ, F, γ, nth, num_repeats=100):
     ψ0 = dynamiqs.fock(N, 0)
 
     options = dynamiqs.Options(progress_meter = False, save_states=False)
+    method = dynamiqs.method.Tsit5(rtol=1e-6, atol=1e-8)
 
-    dynamiqs.mesolve(H, c_ops, ψ0, tlist[0:2], exp_ops=[a.dag() @ a], options=options).states # Warm-up
+    dynamiqs.mesolve(H, c_ops, ψ0, tlist[0:2], exp_ops=[a.dag() @ a], options=options, method=method).states # Warm-up
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options).expects
+        dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=[a.dag() @ a], options=options, method=method).expects
 
     solve() # Warm-up
 
