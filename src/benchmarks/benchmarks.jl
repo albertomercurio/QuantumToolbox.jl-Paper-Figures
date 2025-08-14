@@ -33,10 +33,10 @@ quantumtoolbox_results = JSON.parsefile("julia/quantumtoolbox_benchmark_results.
 
 mesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_mesolve"]),)
 mcsolve_qutip = (times=Vector{Float64}(qutip_results["qutip_mcsolve"]),)
-# ssesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_ssesolve"]),)
 smesolve_qutip = (times=Vector{Float64}(qutip_results["qutip_smesolve"]),)
 
 mesolve_dynamiqs = (times=Vector{Float64}(dynamiqs_results["dynamiqs_mesolve"]),)
+mcsolve_dynamiqs = (times=Vector{Float64}(dynamiqs_results["dynamiqs_mcsolve"]),)
 smesolve_dynamiqs = (times=Vector{Float64}(dynamiqs_results["dynamiqs_smesolve"]),)
 
 mesolve_quantumoptics = (times=Vector{Float64}(quantumoptics_results["quantumoptics_mesolve"]),)
@@ -52,47 +52,48 @@ mesolve_times = [
     m in [mesolve_quantumtoolbox, mesolve_quantumoptics, mesolve_qutip, mesolve_dynamiqs]
 ]
 mcsolve_times =
-    [1e-9 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_quantumoptics, mcsolve_qutip]]
-# ssesolve_times = [
-#     1e-9 * sum(m.times) / length(m.times) for
-#     m in [ssesolve_quantumtoolbox, ssesolve_quantumoptics, ssesolve_qutip]
-# ]
+    [1e-9 * sum(m.times) / length(m.times) for m in [mcsolve_quantumtoolbox, mcsolve_quantumoptics, mcsolve_qutip, mcsolve_dynamiqs]]
 smesolve_times = [
     1e-9 * sum(m.times) / length(m.times) for
     m in [smesolve_quantumtoolbox, smesolve_quantumoptics, smesolve_qutip, smesolve_dynamiqs]
 ]
 
 # Varying the Hilbert space dimension N
-qutip_results_N = JSON.parsefile("python/qutip_benchmark_results_N.json")
-dynamiqs_results_N = JSON.parsefile("python/dynamiqs_benchmark_results_N.json")
-quantumoptics_results_N = JSON.parsefile("julia/quantumoptics_benchmark_results_N.json")
-quantumtoolbox_results_N = JSON.parsefile("julia/quantumtoolbox_benchmark_results_N.json")
+qutip_results_N_cpu = JSON.parsefile("python/qutip_benchmark_results_N_cpu.json")
+dynamiqs_results_N_cpu = JSON.parsefile("python/dynamiqs_benchmark_results_N_cpu.json")
+# quantumoptics_results_N_cpu = JSON.parsefile("julia/quantumoptics_benchmark_results_N_cpu.json")
+quantumtoolbox_results_N_cpu = JSON.parsefile("julia/quantumtoolbox_benchmark_results_N_cpu.json")
 
-mesolve_qutip_N_cpu = (times=convert(Vector{Vector{Float64}}, qutip_results_N["qutip_mesolve_N_cpu"]),)
-mesolve_qutip_N_gpu = (times=convert(Vector{Vector{Float64}}, qutip_results_N["qutip_mesolve_N_gpu"]),)
+qutip_results_N_gpu = JSON.parsefile("python/qutip_benchmark_results_N_gpu.json")
+dynamiqs_results_N_gpu = JSON.parsefile("python/dynamiqs_benchmark_results_N_gpu.json")
+quantumoptics_results_N_gpu = JSON.parsefile("julia/quantumoptics_benchmark_results_N_gpu.json")
+quantumtoolbox_results_N_gpu = JSON.parsefile("julia/quantumtoolbox_benchmark_results_N_gpu.json")
 
-mesolve_dynamiqs_N_cpu = (times=convert(Vector{Vector{Float64}}, dynamiqs_results_N["dynamiqs_mesolve_N_cpu"]),)
-mesolve_dynamiqs_N_gpu = (times=convert(Vector{Vector{Float64}}, dynamiqs_results_N["dynamiqs_mesolve_N_gpu"]),)
+mesolve_qutip_N_cpu = (times=convert(Vector{Vector{Float64}}, qutip_results_N_cpu["qutip_mesolve_N_cpu"]),)
+mesolve_qutip_N_gpu = (times=convert(Vector{Vector{Float64}}, qutip_results_N_gpu["qutip_mesolve_N_gpu"]),)
 
-mesolve_quantumoptics_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumoptics_results_N["quantumoptics_mesolve_N_cpu"]),)
+mesolve_dynamiqs_N_cpu = (times=convert(Vector{Vector{Float64}}, dynamiqs_results_N_cpu["dynamiqs_mesolve_N_cpu"]),)
+mesolve_dynamiqs_N_gpu = (times=convert(Vector{Vector{Float64}}, dynamiqs_results_N_gpu["dynamiqs_mesolve_N_gpu"]),)
 
-mesolve_quantumtoolbox_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N["quantumtoolbox_mesolve_N_cpu"]),)
-mesolve_quantumtoolbox_N_gpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N["quantumtoolbox_mesolve_N_gpu"]),)
+# mesolve_quantumoptics_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumoptics_results_N_cpu["quantumoptics_mesolve_N_cpu"]),)
+mesolve_quantumoptics_N_gpu = (times=convert(Vector{Vector{Float64}}, quantumoptics_results_N_gpu["quantumoptics_mesolve_N_gpu"]),)
+
+mesolve_quantumtoolbox_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N_cpu["quantumtoolbox_mesolve_N_cpu"]),)
+mesolve_quantumtoolbox_N_gpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N_gpu["quantumtoolbox_mesolve_N_gpu"]),)
 
 N_list = floor.(Int, range(10, 800, 10))
 
 mesolve_times_N_cpu = [
     [1e-9 * sum(mm) / length(mm) for mm in m.times] for
-    m in [mesolve_quantumtoolbox_N_cpu, mesolve_quantumoptics_N_cpu, mesolve_qutip_N_cpu, mesolve_dynamiqs_N_cpu]
+    m in [mesolve_quantumtoolbox_N_cpu, mesolve_qutip_N_cpu, mesolve_dynamiqs_N_cpu]
 ]
 mesolve_times_N_gpu = [
     [1e-9 * sum(mm) / length(mm) for mm in m.times] for
-    m in [mesolve_quantumtoolbox_N_gpu, mesolve_qutip_N_gpu, mesolve_dynamiqs_N_gpu]
+    m in [mesolve_quantumtoolbox_N_gpu, mesolve_quantumoptics_N_gpu, mesolve_qutip_N_gpu, mesolve_dynamiqs_N_gpu]
 ]
 
 mesolve_times_x = [1,2,3,4]
-mcsolve_times_x = [1,2,3]
-ssesolve_times_x = [1,2,3]
+mcsolve_times_x = [1,2,3,4]
 smesolve_times_x = [1,2,3,4]
 
 # %% [markdown]
@@ -110,26 +111,21 @@ grid_me_vs_N = grid_plots[2, 1] = GridLayout()
 ax_mesolve = Axis(
     grid_me_mc_sme[1, 1],
     ylabel=L"Time ($\mathrm{s}$)",
-    # title="mesolve",
 )
 ax_mcsolve = Axis(
     grid_me_mc_sme[1, 2],
-    # title="mcsolve",
 )
 ax_smesolve = Axis(
     grid_me_mc_sme[1, 3],
-    # title="smesolve",
 )
 ax_mesolve_vs_N_cpu = Axis(
     grid_me_vs_N[1, 1],
     ylabel="Time (s)",
-    # xscale = log10,
     yscale = log10,
     xlabel = "Hilbert space dimension",
 )
 ax_mesolve_vs_N_gpu = Axis(
     grid_me_vs_N[1, 2],
-    # xscale = log10,
     yscale = log10,
     xlabel = "Hilbert space dimension",
 )
@@ -175,11 +171,11 @@ hidexdecorations!(ax_smesolve)
 
 # Hilbert space dimension N plots
 
-for (i, m) in Iterators.reverse(enumerate(mesolve_times_N_cpu))
-    scatterlines!(ax_mesolve_vs_N_cpu, N_list[4:end], m[4:end], color=colors[i], marker=markers[i])
-end
+# for (i, m) in Iterators.reverse(enumerate(mesolve_times_N_cpu))
+#     scatterlines!(ax_mesolve_vs_N_cpu, N_list[4:end], m[4:end], color=colors[i], marker=markers[i])
+# end
 for (i, m) in Iterators.reverse(enumerate(mesolve_times_N_gpu))
-    scatterlines!(ax_mesolve_vs_N_gpu, N_list[4:length(m)], m[4:end], color=colors[[1,3,4]][i], marker=markers[[1,3,4]][i])
+    scatterlines!(ax_mesolve_vs_N_gpu, N_list[4:length(m)], m[4:end], color=colors[i], marker=markers[i])
 end
 
 # Labels
