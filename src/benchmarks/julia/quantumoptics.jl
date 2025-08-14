@@ -9,28 +9,55 @@ run_gpu = get(ENV, "RUN_GPU_BENCHMARK", "false") == "true"
 # Parameters:
 # %%
 
-const N = 50 # Dimension of the Hilbert space
+const Jx = 1
+const hz = 0.2
+
 const Δ = 0.1 # Detuning with respect to the drive
 const U = -0.05 # Nonlinearity
 const F = 2 # Amplitude of the drive
+const nth = 0.2 # Thermal photons
+
 const γ = 1 # Decay rate
-const nth = 0.2
 const stoc_dt = 1e-3
 const ntraj = 100
 
 # %%
 
-function quantumoptics_mesolve(N)
+function generate_system(N, ::Val{:ising})
+    b = SpinBasis(1//2)
+    bases = tensor([b for _ in 1:N]...)
+
+    iter = Iterators.product(1:N, 1:N)
+    iter_filtered = Iterators.filter(x -> x[1] < x[2], iter)
+
+    Hx = hz * sum(i -> embed(bases, i, sigmaz(b)), 1:N)
+    Hzz = Jx * sum(x -> embed(bases, x[1], sigmax(b)) * embed(bases, x[2], sigmax(b)), iter_filtered)
+    H = Hx + Hzz
+
+    c_ops = [sqrt(γ) * embed(bases, i, sigmam(b)) for i in 1:N]
+    return H, c_ops, bases
+end
+
+function generate_system(N, ::Val{:nho})
     bas = FockBasis(N)
     a = destroy(bas)
 
     H = Δ * a' * a - U / 2 * a'^2 * a^2 + F * (a + a')
     c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 
-    tlist = range(0, 10, 100)
-    ψ0 = fockstate(bas, 0)
+    return H, c_ops, bas
+end
 
-    f_out = (t, state) -> expect(a' * a, state)
+initial_state(N, bas, ::Val{:ising}) = basisstate(bas, ones(Int, N))
+initial_state(N, bas, ::Val{:nho}) = fockstate(bas, 0)
+
+function quantumoptics_mesolve(N, system_type::Val)
+    H, c_ops, bas = generate_system(N, system_type)
+
+    tlist = range(0, 10, 100)
+    ψ0 = initial_state(N, bas, system_type)
+
+    f_out = (t, state) -> expect(H, state)
 
     timeevolution.master(tlist[1:2], ψ0, H, c_ops, fout = f_out) # Warm-up
 
@@ -56,19 +83,15 @@ function quantumoptics_mcwf(tlist, ψ0, H, c_ops, e_ops, ntraj, f_out = (t, stat
     end
 end
 
-function quantumoptics_mcsolve(N)
-    bas = FockBasis(N)
-    a = destroy(bas)
-
-    H = Δ * a' * a - U / 2 * a'^2 * a^2 + F * (a + a')
-    c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+function quantumoptics_mcsolve(N, system_type)
+    H, c_ops, bas = generate_system(N, system_type)
 
     tlist = range(0, 10, 100)
-    ψ0 = fockstate(bas, 0)
+    ψ0 = initial_state(N, bas, system_type)
 
-    quantumoptics_mcwf(tlist, ψ0, H, c_ops, [a' * a], ntraj) # Warm-up
+    quantumoptics_mcwf(tlist, ψ0, H, c_ops, [H], ntraj) # Warm-up
 
-    benchmark_result = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, $([a' * a]), ntraj)
+    benchmark_result = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, $([H]), ntraj)
 
     return benchmark_result.times
 end
@@ -119,22 +142,17 @@ function quantumoptics_smesolve(N)
     return benchmark_result.times
 end
 
-function quantumoptics_mesolve_gpu(N)
-    bas = FockBasis(N)
-    a_cpu = destroy(bas)
-
-    H_cpu = Δ * a_cpu' * a_cpu - U / 2 * a_cpu'^2 * a_cpu^2 + F * (a_cpu + a_cpu')
-    c_ops_cpu = [sqrt(γ * (1 + nth)) * a_cpu, sqrt(γ * nth) * a_cpu']
+function quantumoptics_mesolve_gpu(N, system_type::Val)
+    H_cpu, c_ops_cpu, bas = generate_system(N, system_type)
 
     tlist = range(0, 10, 100)
-    ψ0_cpu = fockstate(bas, 0)
+    ψ0_cpu = initial_state(N, bas, system_type)
 
-    a = Operator(a_cpu.basis_l, a_cpu.basis_r, CuSparseMatrixCSR(a_cpu.data))
     H = Operator(H_cpu.basis_l, H_cpu.basis_r, CuSparseMatrixCSR(H_cpu.data))
     c_ops = [Operator(op.basis_l, op.basis_r, CuSparseMatrixCSR(op.data)) for op in c_ops_cpu]
     ψ0 = Ket(ψ0_cpu.basis, CuVector(ψ0_cpu.data))
 
-    f_out = (t, state) -> expect(a' * a, state)
+    f_out = (t, state) -> expect(H, state)
 
     timeevolution.master(tlist[1:2], ψ0, H, c_ops, fout = f_out) # Warm-up
 
@@ -146,11 +164,12 @@ end
 
 # %%
 
-N_list = floor.(Int, range(10, 800, 10))
+N_list = 2:10
 
 if !run_gpu
-    result_mesolve = quantumoptics_mesolve(N)
-    result_mcsolve = quantumoptics_mcsolve(N)
+    N = 50
+    result_mesolve = quantumoptics_mesolve(N, Val(:nho))
+    result_mcsolve = quantumoptics_mcsolve(N, Val(:nho))
     result_smesolve = quantumoptics_smesolve(N)
 
     # %%
@@ -176,7 +195,7 @@ if !run_gpu
 
     pr = ProgressBar(length(N_list))
     quantumoptics_mesolve_N_cpu = map(N_list) do N
-        res = quantumoptics_mesolve(N)
+        res = quantumoptics_mesolve(N, Val(:ising))
         next!(pr)
         res
     end
@@ -203,7 +222,7 @@ else
 
     pr = ProgressBar(length(N_list))
     quantumoptics_mesolve_N_gpu = map(N_list) do N
-        res = quantumoptics_mesolve_gpu(N)
+        res = quantumoptics_mesolve_gpu(N, Val(:ising))
         next!(pr)
         res
     end

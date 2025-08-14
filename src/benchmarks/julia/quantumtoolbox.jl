@@ -1,3 +1,4 @@
+using LinearAlgebra
 using QuantumToolbox
 using BenchmarkTools
 using JSON
@@ -10,50 +11,81 @@ run_gpu = get(ENV, "RUN_GPU_BENCHMARK", "false") == "true"
 
 # %%
 
-const N = 50 # Dimension of the Hilbert space
+const Jx = 1
+const hz = 0.2
+
 const Δ = 0.1 # Detuning with respect to the drive
 const U = -0.05 # Nonlinearity
 const F = 2 # Amplitude of the drive
+const nth = 0.2 # Thermal photons
+
 const γ = 1 # Decay rate
-const nth = 0.2
 const ntraj = 100
+
 
 # %%
 
-function quantumtoolbox_mesolve(N)
+function local_op(op, i, N)
+    dims = ntuple(d -> 2, N)
+    I_pre = I(prod(dims[1:i-1]))
+    I_post = I(prod(dims[i+1:end]))
+    data = kron(I_pre, op.data, I_post)
+    return QuantumObject(data, Operator(), dims)
+end
+
+function generate_system(N, ::Val{:ising})
+    iter = Iterators.product(1:N, 1:N)
+    iter_filtered = Iterators.filter(x -> x[1] < x[2], iter)
+
+    Hx = hz * sum(i->local_op(sigmaz(), i, N), 1:N)
+    Hzz = Jx * sum(x -> local_op(sigmax(), x[1], N) * local_op(sigmax(), x[2], N), iter_filtered)
+    H = Hx + Hzz
+
+    c_ops = [sqrt(γ) * local_op(sigmam(), i, N) for i in 1:N]
+
+    return H, c_ops
+end
+
+initial_state(N, ::Val{:ising}) = tensor([basis(2, 1) for _ in 1:N]...)
+initial_state(N, ::Val{:nho}) = fock(N, 0)
+
+function generate_system(N, ::Val{:nho})
     a = destroy(N)
     H = Δ * a' * a - U / 2 * a'^2 * a^2 + F * (a + a')
 
     c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 
-    tlist = range(0, 10, 100)
-    ψ0 = fock(N, 0)
+    return H, c_ops
+end
 
-    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = [a' * a], progress_bar = Val(false)) # Warm-up
+function quantumtoolbox_mesolve(N, system_type::Val)
+    H, c_ops = generate_system(N, system_type)
+
+    tlist = range(0, 10, 100)
+    ψ0 = initial_state(N, system_type)
+
+    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = [H], progress_bar = Val(false)) # Warm-up
 
     benchmark_result =
-        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $([a' * a]), progress_bar = Val(false)).expect
+        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $([H]), progress_bar = Val(false)).expect
 
     return benchmark_result.times
 end
 
-function quantumtoolbox_mcsolve(N)
-    a = destroy(N)
-    H = Δ * a' * a - U / 2 * a'^2 * a^2 + F * (a + a')
-
-    c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+function quantumtoolbox_mcsolve(N, system_type::Val)
+    H, c_ops = generate_system(N, system_type)
 
     tlist = range(0, 10, 100)
-    ψ0 = fock(N, 0)
+    ψ0 = initial_state(N, system_type)
 
-    mcsolve(H, ψ0, tlist, c_ops, e_ops = [a' * a], ntraj = 8, progress_bar = Val(false)) # Warm-up
+    mcsolve(H, ψ0, tlist, c_ops, e_ops = [H], ntraj = 8, progress_bar = Val(false)) # Warm-up
 
     benchmark_result = @benchmark mcsolve(
         $H,
         $ψ0,
         $tlist,
         $c_ops,
-        e_ops = $([a' * a]),
+        e_ops = $([H]),
         ntraj = $ntraj,
         progress_bar = Val(false),
     ).expect
@@ -91,30 +123,30 @@ function quantumtoolbox_smesolve(N)
     return benchmark_result.times
 end
 
-function quantumtoolbox_mesolve_gpu(N)
-    a = cu(destroy(N))
-    H = Δ * a' * a - U / 2 * (a^2)' * a^2 + F * (a + a')
-
-    c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+function quantumtoolbox_mesolve_gpu(N, system_type::Val)
+    H_cpu, c_ops_cpu = generate_system(N, system_type)
+    H = cu(H_cpu)
+    c_ops = [cu(x) for x in c_ops_cpu]
 
     tlist = range(0, 10, 100)
-    ψ0 = cu(fock(N, 0))
+    ψ0 = cu(initial_state(N, system_type))
 
-    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = [a' * a], progress_bar = Val(false)) # Warm-up
+    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = [H], progress_bar = Val(false)) # Warm-up
 
     benchmark_result =
-        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $([a' * a]), progress_bar = Val(false)).expect
+        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $([H]), progress_bar = Val(false)).expect
 
     return benchmark_result.times
 end
 
 # %%
 
-N_list = floor.(Int, range(10, 800, 10))
+N_list = 2:10
 
 if !run_gpu
-    result_mesolve = quantumtoolbox_mesolve(N)
-    result_mcsolve = quantumtoolbox_mcsolve(N)
+    N = 50
+    result_mesolve = quantumtoolbox_mesolve(N, Val(:nho))
+    result_mcsolve = quantumtoolbox_mcsolve(N, Val(:nho))
     result_smesolve = quantumtoolbox_smesolve(N)
 
     # Save the results to a JSON file
@@ -132,7 +164,7 @@ if !run_gpu
 
     pr = ProgressBar(length(N_list))
     quantumtoolbox_mesolve_N_cpu = map(N_list) do N
-        res = quantumtoolbox_mesolve(N)
+        res = quantumtoolbox_mesolve(N, Val(:ising))
         next!(pr)
         res
     end
@@ -154,7 +186,7 @@ else
 
     pr = ProgressBar(length(N_list))
     quantumtoolbox_mesolve_N_gpu = map(N_list) do N
-        res = quantumtoolbox_mesolve_gpu(N)
+        res = quantumtoolbox_mesolve_gpu(N, Val(:ising))
         next!(pr)
         res
     end

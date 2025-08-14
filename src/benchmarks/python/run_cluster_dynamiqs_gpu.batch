@@ -15,7 +15,7 @@
 
 export JULIA_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export PYTHONUNBUFFERED=1
-export RUN_GPU_BENCHMARK=True
+export RUN_GPU_BENCHMARK=true
 
 # Unset LD_LIBRARY_PATH due to this issue https://github.com/jax-ml/jax/issues/28929
 unset LD_LIBRARY_PATH
