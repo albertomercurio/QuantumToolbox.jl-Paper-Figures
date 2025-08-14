@@ -196,7 +196,7 @@ if not run_gpu:
     benchmark_results = {
         "qutip_mesolve": qutip_mesolve(N, "nho", num_repeats=100),
         "qutip_mcsolve": qutip_mcsolve(N, "nho", ntraj, num_repeats=10),
-        "qutip_smesolve": qutip_smesolve(N, nth, ntraj, num_repeats=5),
+        "qutip_smesolve": qutip_smesolve(N, ntraj, num_repeats=5),
     }
 
     # %%

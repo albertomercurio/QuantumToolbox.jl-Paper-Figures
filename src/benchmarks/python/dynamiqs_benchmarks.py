@@ -209,7 +209,7 @@ else:
             num_repeats = 10
         if N > 200:
             num_repeats = 2
-        dynamiqs_mesolve_N_gpu.append(dynamiqs_mesolve(N, "ising", nth, num_repeats=num_repeats))
+        dynamiqs_mesolve_N_gpu.append(dynamiqs_mesolve(N, "ising", num_repeats=num_repeats))
 
     benchmark_results_N = {
         "dynamiqs_mesolve_N_gpu": dynamiqs_mesolve_N_gpu,
