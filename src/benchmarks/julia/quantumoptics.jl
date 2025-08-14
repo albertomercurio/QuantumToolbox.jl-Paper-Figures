@@ -22,7 +22,7 @@ const stoc_dt = 1e-3
 const ntraj = 100
 
 const N_list_cpu = 2:12
-const N_list_gpu = 2:15
+const N_list_gpu = 2:12
 
 # %%
 
@@ -30,12 +30,13 @@ function generate_system(N, ::Val{:ising})
     b = SpinBasis(1//2)
     bases = tensor([b for _ in 1:N]...)
 
-    iter = Iterators.product(1:N, 1:N)
-    iter_filtered = Iterators.filter(x -> x[1] < x[2], iter)
+    # iter = Iterators.product(1:N, 1:N)
+    # iter_filtered = Iterators.filter(x -> x[1] < x[2], iter)
 
-    Hx = hz * sum(i -> embed(bases, i, sigmaz(b)), 1:N)
-    Hzz = Jx * sum(x -> embed(bases, x[1], sigmax(b)) * embed(bases, x[2], sigmax(b)), iter_filtered)
-    H = Hx + Hzz
+    Hz = hz * sum(i -> embed(bases, i, sigmaz(b)), 1:N)
+    # Hxx = Jx * sum(x -> embed(bases, x[1], sigmax(b)) * embed(bases, x[2], sigmax(b)), iter_filtered)
+    Hxx = Jx * sum(i -> embed(bases, i, sigmax(b)) * embed(bases, i+1, sigmax(b)), 1:N-1)
+    H = Hz + Hxx
 
     c_ops = [sqrt(γ) * embed(bases, i, sigmam(b)) for i in 1:N]
     return H, c_ops, bases

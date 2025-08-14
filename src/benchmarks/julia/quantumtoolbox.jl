@@ -23,7 +23,7 @@ const γ = 1 # Decay rate
 const ntraj = 100
 
 const N_list_cpu = 2:12
-const N_list_gpu = 2:15
+const N_list_gpu = 2:12
 
 # %%
 
@@ -36,12 +36,13 @@ function local_op(op, i, N)
 end
 
 function generate_system(N, ::Val{:ising})
-    iter = Iterators.product(1:N, 1:N)
-    iter_filtered = Iterators.filter(x -> x[1] < x[2], iter)
+    # iter = Iterators.product(1:N, 1:N)
+    # iter_filtered = Iterators.filter(x -> x[1] < x[2], iter)
 
-    Hx = hz * sum(i->local_op(sigmaz(), i, N), 1:N)
-    Hzz = Jx * sum(x -> local_op(sigmax(), x[1], N) * local_op(sigmax(), x[2], N), iter_filtered)
-    H = Hx + Hzz
+    Hz = hz * sum(i->local_op(sigmaz(), i, N), 1:N)
+    # Hxx = Jx * sum(x -> local_op(sigmax(), x[1], N) * local_op(sigmax(), x[2], N), iter_filtered)
+    Hxx = Jx * sum(i -> local_op(sigmax(), i, N) * local_op(sigmax(), i+1, N), 1:N-1)
+    H = Hz + Hxx
 
     c_ops = [sqrt(γ) * local_op(sigmam(), i, N) for i in 1:N]
 

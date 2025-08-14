@@ -30,7 +30,7 @@ ntraj = 100
 stoc_dt = 1e-3 # In case we run with a fixed timestep algorithm
 
 N_list_cpu = range(2, 13)
-N_list_gpu = range(2, 16)
+N_list_gpu = range(2, 13)
 
 # %%
 
@@ -42,9 +42,10 @@ def local_op(op, i, N):
 
 def generate_system(N, system_type):
     if system_type == "ising":
-        Hx = hz * sum(local_op(qutip.sigmaz(), i, N) for i in range(N))
-        Hzz = Jx * sum(local_op(qutip.sigmax(), i, N) * local_op(qutip.sigmax(), j, N) for i in range(N) for j in range(i+1, N))
-        H = Hx + Hzz
+        Hz = hz * sum(local_op(qutip.sigmaz(), i, N) for i in range(N))
+        # Hxx = Jx * sum(local_op(qutip.sigmax(), i, N) * local_op(qutip.sigmax(), j, N) for i in range(N) for j in range(i+1, N))
+        Hxx = Jx * sum(local_op(qutip.sigmax(), i, N) * local_op(qutip.sigmax(), i+1, N) for i in range(N-1))
+        H = Hz + Hxx
 
         c_ops = [np.sqrt(γ) * local_op(qutip.sigmam(), i, N) for i in range(N)]
         return H, c_ops
