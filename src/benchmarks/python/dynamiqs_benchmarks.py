@@ -29,6 +29,9 @@ nth = 0.2 # Thermal photons
 ntraj = 100
 stoc_dt = 1e-3
 
+N_list_cpu = range(2, 13)
+N_list_gpu = range(2, 16)
+
 # %%
 
 def local_op(op, i, N):
@@ -149,15 +152,13 @@ def dynamiqs_smesolve(N, ntraj, num_repeats=100):
 
 # %%
 
-N_list = range(2, 11)
-
 if not run_gpu:
     N = 50
 
     # Benchmark all cases
     benchmark_results = {
-        "dynamiqs_mesolve": dynamiqs_mesolve(N, "nho", nth, num_repeats=100),
-        "dynamiqs_mcsolve": dynamiqs_mcsolve(N, "nho", nth, ntraj, num_repeats=10),
+        "dynamiqs_mesolve": dynamiqs_mesolve(N, "nho", num_repeats=100),
+        "dynamiqs_mcsolve": dynamiqs_mcsolve(N, "nho", ntraj, num_repeats=10),
         "dynamiqs_smesolve": dynamiqs_smesolve(N, ntraj, num_repeats=5),
     }
 
@@ -175,7 +176,7 @@ if not run_gpu:
     # %%
 
     dynamiqs_mesolve_N_cpu = []
-    for N in tqdm(N_list):
+    for N in tqdm(N_list_cpu):
         num_repeats = 40
         if N > 50:
             num_repeats = 20
@@ -183,7 +184,7 @@ if not run_gpu:
             num_repeats = 10
         if N > 200:
             num_repeats = 2
-        dynamiqs_mesolve_N_cpu.append(dynamiqs_mesolve(N, "ising", nth, num_repeats=num_repeats))
+        dynamiqs_mesolve_N_cpu.append(dynamiqs_mesolve(N, "ising", num_repeats=num_repeats))
 
     benchmark_results_N = {
         "dynamiqs_mesolve_N_cpu": dynamiqs_mesolve_N_cpu,
@@ -201,7 +202,7 @@ else:
 
     dynamiqs_mesolve_N_gpu = []
     # In this way it is safe if it fails due to lack of GPU memory
-    for N in tqdm(N_list):
+    for N in tqdm(N_list_gpu):
         num_repeats = 100
         if N > 50:
             num_repeats = 40

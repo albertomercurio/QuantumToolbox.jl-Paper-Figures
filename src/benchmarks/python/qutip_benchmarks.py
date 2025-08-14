@@ -29,6 +29,9 @@ nth = 0.2 # Thermal photons
 ntraj = 100
 stoc_dt = 1e-3 # In case we run with a fixed timestep algorithm
 
+N_list_cpu = range(2, 13)
+N_list_gpu = range(2, 16)
+
 # %%
 
 def local_op(op, i, N):
@@ -187,8 +190,6 @@ def qutip_mesolve_gpu(N, system_type, num_repeats=100):
         return [t * 1e9 for t in times]  # List of times in nanoseconds
 
 # %%
-
-N_list = range(2, 11)
     
 if not run_gpu:
     # Benchmark all cases
@@ -208,7 +209,7 @@ if not run_gpu:
         json.dump(benchmark_results, f, indent=4)
 
     qutip_mesolve_N_cpu = []
-    for N in tqdm(N_list):
+    for N in tqdm(N_list_cpu):
         num_repeats = 40
         if N > 50:
             num_repeats = 20
@@ -235,7 +236,7 @@ if not run_gpu:
         json.dump(benchmark_results_N, f, indent=4)
 else:
     qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
-    for N in tqdm(N_list):
+    for N in tqdm(N_list_gpu):
         num_repeats = 200
         if N > 50:
             num_repeats = 40

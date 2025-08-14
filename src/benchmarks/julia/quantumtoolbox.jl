@@ -22,6 +22,8 @@ const nth = 0.2 # Thermal photons
 const γ = 1 # Decay rate
 const ntraj = 100
 
+const N_list_cpu = 2:12
+const N_list_gpu = 2:15
 
 # %%
 
@@ -141,8 +143,6 @@ end
 
 # %%
 
-N_list = 2:10
-
 if !run_gpu
     N = 50
     result_mesolve = quantumtoolbox_mesolve(N, Val(:nho))
@@ -162,8 +162,8 @@ if !run_gpu
         JSON.print(file, results)
     end
 
-    pr = ProgressBar(length(N_list))
-    quantumtoolbox_mesolve_N_cpu = map(N_list) do N
+    pr = ProgressBar(length(N_list_cpu))
+    quantumtoolbox_mesolve_N_cpu = map(N_list_cpu) do N
         res = quantumtoolbox_mesolve(N, Val(:ising))
         next!(pr)
         res
@@ -184,8 +184,8 @@ else
     using CUDA.CUSPARSE
     CUDA.allowscalar(false)
 
-    pr = ProgressBar(length(N_list))
-    quantumtoolbox_mesolve_N_gpu = map(N_list) do N
+    pr = ProgressBar(length(N_list_gpu))
+    quantumtoolbox_mesolve_N_gpu = map(N_list_gpu) do N
         res = quantumtoolbox_mesolve_gpu(N, Val(:ising))
         next!(pr)
         res

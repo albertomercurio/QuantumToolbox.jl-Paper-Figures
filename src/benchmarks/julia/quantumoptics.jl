@@ -21,6 +21,9 @@ const γ = 1 # Decay rate
 const stoc_dt = 1e-3
 const ntraj = 100
 
+const N_list_cpu = 2:12
+const N_list_gpu = 2:15
+
 # %%
 
 function generate_system(N, ::Val{:ising})
@@ -164,8 +167,6 @@ end
 
 # %%
 
-N_list = 2:10
-
 if !run_gpu
     N = 50
     result_mesolve = quantumoptics_mesolve(N, Val(:nho))
@@ -193,9 +194,10 @@ if !run_gpu
 
     # %%
 
-    pr = ProgressBar(length(N_list))
-    quantumoptics_mesolve_N_cpu = map(N_list) do N
+    pr = ProgressBar(length(N_list_cpu))
+    quantumoptics_mesolve_N_cpu = map(N_list_cpu) do N
         res = quantumoptics_mesolve(N, Val(:ising))
+        GC.gc(true)
         next!(pr)
         res
     end
@@ -220,9 +222,10 @@ else
         return tr(op * state)
     end
 
-    pr = ProgressBar(length(N_list))
-    quantumoptics_mesolve_N_gpu = map(N_list) do N
+    pr = ProgressBar(length(N_list_gpu))
+    quantumoptics_mesolve_N_gpu = map(N_list_gpu) do N
         res = quantumoptics_mesolve_gpu(N, Val(:ising))
+        GC.gc(true)
         next!(pr)
         res
     end
