@@ -17,8 +17,8 @@ run_gpu = os.getenv("RUN_GPU_BENCHMARK", "false") == "true"
 # Parameters:
 
 # %%
-Jx = 1.0
-hz = 0.2
+Jx = 10.4
+hz = 10.0
 
 Δ = 0.1 # Detuning with respect to the drive
 U = -0.05 # Nonlinearity
@@ -35,8 +35,7 @@ N_list_gpu = range(2, 13)
 # %%
 
 def local_op(op, i, N):
-    ops = [qutip.qeye(2)]*N
-    ops = list(ops)
+    ops = [qutip.qeye(2) for _ in range(N)]
     ops[i] = op
     return qutip.tensor(ops)
 
@@ -47,33 +46,43 @@ def generate_system(N, system_type):
         Hxx = Jx * sum(local_op(qutip.sigmax(), i, N) * local_op(qutip.sigmax(), i+1, N) for i in range(N-1))
         H = Hz + Hxx
 
-        c_ops = [np.sqrt(γ) * local_op(qutip.sigmam(), i, N) for i in range(N)]
-        return H, c_ops
+        # c_ops = [np.sqrt(γ) * local_op(qutip.sigmam(), i, N) for i in range(N)]
+        if isinstance(H.data, qutip_jax.jaxdia.JaxDia):
+            c_ops = [jnp.sqrt(γ) * local_op(qutip.sigmam(), i, N) for i in range(N)]
+        else:
+            c_ops = [np.sqrt(γ) * local_op(qutip.sigmam(), i, N) for i in range(N)]
+
+        e_ops = [local_op(qutip.sigmaz(), N-1, N)]
+
+        return H, c_ops, e_ops
     elif system_type == "nho":
         a = qutip.destroy(N)
         H = Δ * a.dag() * a - U/2 * a.dag()**2 * a**2 + F * (a + a.dag())
         c_ops = [np.sqrt(γ * (1 + nth)) * a, np.sqrt(γ * nth) * a.dag()]
-        return H, c_ops
+
+        e_ops = [a.dag() * a]
+
+        return H, c_ops, e_ops
 
 def initial_state(N, system_type):
     if system_type == "ising":
-        return qutip.tensor([qutip.basis(2, 1) for _ in range(N)])
+        return qutip.tensor([qutip.basis(2, 0) for _ in range(N)])
     elif system_type == "nho":
         return qutip.fock(N, 0)
 
 def qutip_mesolve(N, system_type, num_repeats=100):
     """Benchmark qutip.mesolve using timeit for more accurate timing."""
-    H, c_ops = generate_system(N, system_type)
+    H, c_ops, e_ops = generate_system(N, system_type)
 
     tlist = np.linspace(0, 10, 100)
     ψ0 = initial_state(N, system_type)
     options = {"store_final_state": True}
 
-    qutip.mesolve(H, ψ0, tlist[0:2], c_ops, e_ops=[H], options=options) # Warm-up
+    qutip.mesolve(H, ψ0, tlist[0:2], c_ops, e_ops=e_ops, options=options) # Warm-up
 
     # Define the statement to benchmark
     def solve():
-        qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=[H], options=options).expect
+        qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=e_ops, options=options).expect
 
     # Run the benchmark using timeit
     times = timeit.repeat(solve, repeat=num_repeats, number=1)  # number=1 ensures individual execution times
@@ -82,7 +91,7 @@ def qutip_mesolve(N, system_type, num_repeats=100):
 
 def qutip_mcsolve(N, system_type, ntraj, num_repeats=100):
     """Benchmark qutip.mcsolve using timeit for more accurate timing."""
-    H, c_ops = generate_system(N, system_type)
+    H, c_ops, e_ops = generate_system(N, system_type)
 
     tlist = np.linspace(0, 10, 100)
     ψ0 = initial_state(N, system_type)
@@ -94,7 +103,7 @@ def qutip_mcsolve(N, system_type, ntraj, num_repeats=100):
         ψ0,
         tlist,
         c_ops,
-        e_ops = [H],
+        e_ops = e_ops,
         ntraj = ntraj,
         options = options,
     ) # Warm-up
@@ -106,7 +115,7 @@ def qutip_mcsolve(N, system_type, ntraj, num_repeats=100):
             ψ0,
             tlist,
             c_ops,
-            e_ops = [H],
+            e_ops = e_ops,
             ntraj = ntraj,
             options = options,
         ).expect
@@ -162,15 +171,15 @@ def qutip_smesolve(N, ntraj, num_repeats=100):
 
     return [t * 1e9 for t in times]  # List
 
-def qutip_mesolve_gpu(N, system_type, num_repeats=100):
+def qutip_mesolve_gpu(N, system_type, num_repeats=10):
     """Benchmark qutip.mesolve using timeit for more accurate timing."""
     with jax.default_device(jax.devices("gpu")[0]):
         with qutip.CoreOptions(default_dtype="jaxdia"):
-            H, c_ops = generate_system(N, system_type)
+            H, c_ops, e_ops = generate_system(N, system_type)
 
             tlist = jnp.linspace(0, 10, 100)
 
-            ψ0 = initial_state(N, system_type).to("jax") # Dense vector
+            ψ0 = initial_state(N, system_type) # Dense vector
 
             options = {
                 "normalize_output":False,
@@ -181,7 +190,7 @@ def qutip_mesolve_gpu(N, system_type, num_repeats=100):
 
             # Define the statement to benchmark
             def solve():
-                qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=[H], options=options).expect
+                qutip.mesolve(H, ψ0, tlist, c_ops, e_ops=e_ops, options=options).expect
 
             solve() # Warm-up
 
@@ -211,18 +220,11 @@ if not run_gpu:
 
     qutip_mesolve_N_cpu = []
     for N in tqdm(N_list_cpu):
-        num_repeats = 40
-        if N > 50:
-            num_repeats = 20
-        if N > 100:
-            num_repeats = 10
-        if N > 200:
-            num_repeats = 2
-        try:
-            qutip_mesolve_N_cpu.append(qutip_mesolve(N, "ising", num_repeats=num_repeats))
-        except Exception as e:
-            print(f"Failed for N={N} with error: {e}")
-            break
+        num_repeats = 2
+        if N > 6:
+            num_repeats = 1
+        
+        qutip_mesolve_N_cpu.append(qutip_mesolve(N, "ising", num_repeats=num_repeats))
 
     benchmark_results_N = {
         "qutip_mesolve_N_cpu": qutip_mesolve_N_cpu,
@@ -238,18 +240,11 @@ if not run_gpu:
 else:
     qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
     for N in tqdm(N_list_gpu):
-        num_repeats = 200
-        if N > 50:
-            num_repeats = 40
-        if N > 100:
-            num_repeats = 10
-        if N > 200:
-            num_repeats = 2
-        try:
-            qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, "ising", num_repeats=num_repeats))
-        except Exception as e:
-            print(f"Failed for N={N} with error: {e}")
-            break
+        num_repeats = 2
+        if N > 6:
+            num_repeats = 1
+
+        qutip_mesolve_N_gpu.append(qutip_mesolve_gpu(N, "ising", num_repeats=num_repeats))
 
     benchmark_results_N = {
         "qutip_mesolve_N_gpu": qutip_mesolve_N_gpu,

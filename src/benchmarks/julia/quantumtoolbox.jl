@@ -1,5 +1,6 @@
 using LinearAlgebra
 using QuantumToolbox
+using QuantumToolbox: getVal
 using BenchmarkTools
 using JSON
 
@@ -11,8 +12,8 @@ run_gpu = get(ENV, "RUN_GPU_BENCHMARK", "false") == "true"
 
 # %%
 
-const Jx = 1
-const hz = 0.2
+const Jx = 10.4
+const hz = 10.0
 
 const Δ = 0.1 # Detuning with respect to the drive
 const U = -0.05 # Nonlinearity
@@ -39,18 +40,17 @@ function generate_system(N, ::Val{:ising})
     # iter = Iterators.product(1:N, 1:N)
     # iter_filtered = Iterators.filter(x -> x[1] < x[2], iter)
 
-    Hz = hz * sum(i->local_op(sigmaz(), i, N), 1:N)
+    Hz = hz * sum(i->local_op(sigmaz(), i, N), 1:getVal(N))
     # Hxx = Jx * sum(x -> local_op(sigmax(), x[1], N) * local_op(sigmax(), x[2], N), iter_filtered)
-    Hxx = Jx * sum(i -> local_op(sigmax(), i, N) * local_op(sigmax(), i+1, N), 1:N-1)
+    Hxx = Jx * sum(i -> local_op(sigmax(), i, N) * local_op(sigmax(), i+1, N), 1:getVal(N)-1)
     H = Hz + Hxx
 
-    c_ops = [sqrt(γ) * local_op(sigmam(), i, N) for i in 1:N]
+    c_ops = [sqrt(γ) * local_op(sigmam(), i, N) for i in 1:getVal(N)]
 
-    return H, c_ops
+    e_ops = [local_op(sigmaz(), getVal(N), N)]
+
+    return H, c_ops, e_ops
 end
-
-initial_state(N, ::Val{:ising}) = tensor([basis(2, 1) for _ in 1:N]...)
-initial_state(N, ::Val{:nho}) = fock(N, 0)
 
 function generate_system(N, ::Val{:nho})
     a = destroy(N)
@@ -58,37 +58,42 @@ function generate_system(N, ::Val{:nho})
 
     c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
 
-    return H, c_ops
+    e_ops = [a' * a]
+
+    return H, c_ops, e_ops
 end
 
+initial_state(N, ::Val{:ising}) = tensor(ntuple(i->basis(2, 0), N)...)
+initial_state(N, ::Val{:nho}) = fock(N, 0)
+
 function quantumtoolbox_mesolve(N, system_type::Val)
-    H, c_ops = generate_system(N, system_type)
+    H, c_ops, e_ops = generate_system(N, system_type)
 
     tlist = range(0, 10, 100)
     ψ0 = initial_state(N, system_type)
 
-    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = [H], progress_bar = Val(false)) # Warm-up
+    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = e_ops, progress_bar = Val(false)) # Warm-up
 
     benchmark_result =
-        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $([H]), progress_bar = Val(false)).expect
+        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $e_ops, progress_bar = Val(false)).expect
 
     return benchmark_result.times
 end
 
 function quantumtoolbox_mcsolve(N, system_type::Val)
-    H, c_ops = generate_system(N, system_type)
+    H, c_ops, e_ops = generate_system(N, system_type)
 
     tlist = range(0, 10, 100)
     ψ0 = initial_state(N, system_type)
 
-    mcsolve(H, ψ0, tlist, c_ops, e_ops = [H], ntraj = 8, progress_bar = Val(false)) # Warm-up
+    mcsolve(H, ψ0, tlist, c_ops, e_ops = e_ops, ntraj = 8, progress_bar = Val(false)) # Warm-up
 
     benchmark_result = @benchmark mcsolve(
         $H,
         $ψ0,
         $tlist,
         $c_ops,
-        e_ops = $([H]),
+        e_ops = $e_ops,
         ntraj = $ntraj,
         progress_bar = Val(false),
     ).expect
@@ -127,17 +132,18 @@ function quantumtoolbox_smesolve(N)
 end
 
 function quantumtoolbox_mesolve_gpu(N, system_type::Val)
-    H_cpu, c_ops_cpu = generate_system(N, system_type)
+    H_cpu, c_ops_cpu, e_ops_cpu = generate_system(N, system_type)
     H = cu(H_cpu)
     c_ops = [cu(x) for x in c_ops_cpu]
+    e_ops = [cu(x) for x in e_ops_cpu]
 
     tlist = range(0, 10, 100)
     ψ0 = cu(initial_state(N, system_type))
 
-    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = [H], progress_bar = Val(false)) # Warm-up
+    mesolve(H, ψ0, tlist[1:2], c_ops, e_ops = e_ops, progress_bar = Val(false)) # Warm-up
 
     benchmark_result =
-        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $([H]), progress_bar = Val(false)).expect
+        @benchmark mesolve($H, $ψ0, $tlist, $c_ops, e_ops = $e_ops, progress_bar = Val(false)).expect
 
     return benchmark_result.times
 end

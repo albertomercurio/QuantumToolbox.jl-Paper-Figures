@@ -9,8 +9,8 @@ run_gpu = get(ENV, "RUN_GPU_BENCHMARK", "false") == "true"
 # Parameters:
 # %%
 
-const Jx = 1
-const hz = 0.2
+const Jx = 10.4
+const hz = 10.0
 
 const Δ = 0.1 # Detuning with respect to the drive
 const U = -0.05 # Nonlinearity
@@ -39,7 +39,10 @@ function generate_system(N, ::Val{:ising})
     H = Hz + Hxx
 
     c_ops = [sqrt(γ) * embed(bases, i, sigmam(b)) for i in 1:N]
-    return H, c_ops, bases
+
+    e_ops = [embed(bases, N, sigmaz(b))]
+
+    return H, c_ops, e_ops, bases
 end
 
 function generate_system(N, ::Val{:nho})
@@ -48,20 +51,21 @@ function generate_system(N, ::Val{:nho})
 
     H = Δ * a' * a - U / 2 * a'^2 * a^2 + F * (a + a')
     c_ops = [sqrt(γ * (1 + nth)) * a, sqrt(γ * nth) * a']
+    e_ops = [a' * a]
 
-    return H, c_ops, bas
+    return H, c_ops, e_ops, bas
 end
 
 initial_state(N, bas, ::Val{:ising}) = basisstate(bas, ones(Int, N))
 initial_state(N, bas, ::Val{:nho}) = fockstate(bas, 0)
 
 function quantumoptics_mesolve(N, system_type::Val)
-    H, c_ops, bas = generate_system(N, system_type)
+    H, c_ops, e_ops, bas = generate_system(N, system_type)
 
     tlist = range(0, 10, 100)
     ψ0 = initial_state(N, bas, system_type)
 
-    f_out = (t, state) -> expect(H, state)
+    f_out = (t, state) -> expect(e_ops[1], state)
 
     timeevolution.master(tlist[1:2], ψ0, H, c_ops, fout = f_out) # Warm-up
 
@@ -88,14 +92,14 @@ function quantumoptics_mcwf(tlist, ψ0, H, c_ops, e_ops, ntraj, f_out = (t, stat
 end
 
 function quantumoptics_mcsolve(N, system_type)
-    H, c_ops, bas = generate_system(N, system_type)
+    H, c_ops, e_ops, bas = generate_system(N, system_type)
 
     tlist = range(0, 10, 100)
     ψ0 = initial_state(N, bas, system_type)
 
-    quantumoptics_mcwf(tlist, ψ0, H, c_ops, [H], ntraj) # Warm-up
+    quantumoptics_mcwf(tlist, ψ0, H, c_ops, e_ops, ntraj) # Warm-up
 
-    benchmark_result = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, $([H]), ntraj)
+    benchmark_result = @benchmark quantumoptics_mcwf($tlist, $ψ0, $H, $c_ops, $e_ops, $ntraj)
 
     return benchmark_result.times
 end
@@ -147,16 +151,17 @@ function quantumoptics_smesolve(N)
 end
 
 function quantumoptics_mesolve_gpu(N, system_type::Val)
-    H_cpu, c_ops_cpu, bas = generate_system(N, system_type)
+    H_cpu, c_ops_cpu, e_ops_cpu, bas = generate_system(N, system_type)
 
     tlist = range(0, 10, 100)
     ψ0_cpu = initial_state(N, bas, system_type)
 
     H = Operator(H_cpu.basis_l, H_cpu.basis_r, CuSparseMatrixCSR(H_cpu.data))
     c_ops = [Operator(op.basis_l, op.basis_r, CuSparseMatrixCSR(op.data)) for op in c_ops_cpu]
+    e_ops = [Operator(op.basis_l, op.basis_r, CuSparseMatrixCSR(op.data)) for op in e_ops_cpu]
     ψ0 = Ket(ψ0_cpu.basis, CuVector(ψ0_cpu.data))
 
-    f_out = (t, state) -> expect(H, state)
+    f_out = (t, state) -> expect(e_ops[1], state)
 
     timeevolution.master(tlist[1:2], ψ0, H, c_ops, fout = f_out) # Warm-up
 
