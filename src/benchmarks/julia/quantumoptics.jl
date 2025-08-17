@@ -9,8 +9,8 @@ run_gpu = get(ENV, "RUN_GPU_BENCHMARK", "false") == "true"
 # Parameters:
 # %%
 
-const Jx = 10.4
-const hz = 10.0
+const Jx = 25
+const hz = 50
 
 const Δ = 0.1 # Detuning with respect to the drive
 const U = -0.05 # Nonlinearity
@@ -21,7 +21,7 @@ const γ = 1 # Decay rate
 const stoc_dt = 1e-3
 const ntraj = 100
 
-const N_list_cpu = 2:12
+const N_list_cpu = 2:10
 const N_list_gpu = 2:12
 
 # %%

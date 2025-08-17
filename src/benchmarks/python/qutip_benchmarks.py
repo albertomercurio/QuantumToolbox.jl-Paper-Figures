@@ -17,8 +17,8 @@ run_gpu = os.getenv("RUN_GPU_BENCHMARK", "false") == "true"
 # Parameters:
 
 # %%
-Jx = 10.4
-hz = 10.0
+Jx = 25
+hz = 50
 
 Δ = 0.1 # Detuning with respect to the drive
 U = -0.05 # Nonlinearity
@@ -29,7 +29,7 @@ nth = 0.2 # Thermal photons
 ntraj = 100
 stoc_dt = 1e-3 # In case we run with a fixed timestep algorithm
 
-N_list_cpu = range(2, 13)
+N_list_cpu = range(2, 11)
 N_list_gpu = range(2, 12)
 
 # %%

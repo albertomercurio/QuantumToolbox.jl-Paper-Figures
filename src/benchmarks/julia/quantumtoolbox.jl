@@ -12,8 +12,8 @@ run_gpu = get(ENV, "RUN_GPU_BENCHMARK", "false") == "true"
 
 # %%
 
-const Jx = 10.4
-const hz = 10.0
+const Jx = 25
+const hz = 50
 
 const Δ = 0.1 # Detuning with respect to the drive
 const U = -0.05 # Nonlinearity
@@ -23,7 +23,7 @@ const nth = 0.2 # Thermal photons
 const γ = 1 # Decay rate
 const ntraj = 100
 
-const N_list_cpu = 2:12
+const N_list_cpu = 2:10
 const N_list_gpu = 2:12
 
 # %%
@@ -194,6 +194,7 @@ else
     pr = ProgressBar(length(N_list_gpu))
     quantumtoolbox_mesolve_N_gpu = map(N_list_gpu) do N
         res = quantumtoolbox_mesolve_gpu(N, Val(:ising))
+        GC.gc(true)
         next!(pr)
         res
     end
