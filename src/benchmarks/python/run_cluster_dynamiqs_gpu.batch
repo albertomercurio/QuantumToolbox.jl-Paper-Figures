@@ -2,12 +2,12 @@
 #SBATCH --job-name=dynamiqs-benchmark-gpu
 #SBATCH --output=output_dynamiqs_gpu.out
 #SBATCH --error=error_dynamiqs_gpu.out
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=32
 #SBATCH --gpus-per-task=1
-#SBATCH --mem=0
+#SBATCH --mem=64G
 #SBATCH --account=go54
 #SBATCH --partition=normal
 #SBATCH --uenv=prgenv-gnu/24.11:v1
