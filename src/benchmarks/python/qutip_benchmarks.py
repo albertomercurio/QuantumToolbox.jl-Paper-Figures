@@ -30,7 +30,7 @@ ntraj = 100
 stoc_dt = 1e-3 # In case we run with a fixed timestep algorithm
 
 N_list_cpu = range(2, 11)
-N_list_gpu = range(2, 12)
+N_list_gpu = range(2, 11)
 
 # %%
 
