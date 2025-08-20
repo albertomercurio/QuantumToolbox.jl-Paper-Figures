@@ -2,15 +2,15 @@
 
 This repository contains the code used to generate the figures in the paper about [QuantumToolbox.jl](https://github.com/qutip/QuantumToolbox.jl) package.
 
-## How to build the Website
+## How to run the benchmarks
 
-The website is built using [Quarto](https://quarto.org). The steps to build the website are:
-
-1. Install a python environment and install the dependencies with `pip install -r requirements.txt`. 
-2. Load the environment variables: `set -a && source _environment && set +a`
-3. Run Quarto: `all-render` or `all-publish`
+1. Set the environment variable `JULIA_NUM_THREADS` to a suitable value, according to the number of CPU cores available on your machine.
+2. Install a python environment and install the dependencies with `pip install -r requirements.txt`. For a CPU-only machine, use `pip install -r requirements-cpuonly.txt`.
+3. Run the benchmarks using the `make` command:
+    - `make qutip-benchmark`
+    - `make dynamiqs-benchmark`
+    - `make quantumoptics-benchmark`
+    - `make quantumtoolbox-benchmark`
 
 > [!NOTE]
 > All the following commands should be run under the root folder of this repository: `/path/to/QuantumToolbox.jl-Paper-Figures/`
-
-You can even just render the website locally by running `quarto render` and open the `index.html` file in your browser.

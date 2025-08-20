@@ -20,7 +20,6 @@ kiwisolver==1.4.9
 lineax==0.0.8
 matplotlib==3.10.5
 matplotlib-inline==0.1.7
-meson @ file:///tmp/bcumming/spack-stage/spack-stage-meson-1.5.1-janderzffyg63etmku27tshykxc2uwgp/spack-src
 ml_dtypes==0.5.3
 numpy==2.3.2
 opt_einsum==3.4.0
