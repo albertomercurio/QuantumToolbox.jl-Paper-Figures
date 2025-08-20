@@ -61,7 +61,7 @@ smesolve_times = [
 # Varying the Hilbert space dimension N
 qutip_results_N_cpu = JSON.parsefile("python/qutip_benchmark_results_N_cpu.json")
 dynamiqs_results_N_cpu = JSON.parsefile("python/dynamiqs_benchmark_results_N_cpu.json")
-# quantumoptics_results_N_cpu = JSON.parsefile("julia/quantumoptics_benchmark_results_N_cpu.json")
+quantumoptics_results_N_cpu = JSON.parsefile("julia/quantumoptics_benchmark_results_N_cpu.json")
 quantumtoolbox_results_N_cpu = JSON.parsefile("julia/quantumtoolbox_benchmark_results_N_cpu.json")
 
 qutip_results_N_gpu = JSON.parsefile("python/qutip_benchmark_results_N_gpu.json")
@@ -75,17 +75,18 @@ mesolve_qutip_N_gpu = (times=convert(Vector{Vector{Float64}}, qutip_results_N_gp
 mesolve_dynamiqs_N_cpu = (times=convert(Vector{Vector{Float64}}, dynamiqs_results_N_cpu["dynamiqs_mesolve_N_cpu"]),)
 mesolve_dynamiqs_N_gpu = (times=convert(Vector{Vector{Float64}}, dynamiqs_results_N_gpu["dynamiqs_mesolve_N_gpu"]),)
 
-# mesolve_quantumoptics_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumoptics_results_N_cpu["quantumoptics_mesolve_N_cpu"]),)
+mesolve_quantumoptics_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumoptics_results_N_cpu["quantumoptics_mesolve_N_cpu"]),)
 mesolve_quantumoptics_N_gpu = (times=convert(Vector{Vector{Float64}}, quantumoptics_results_N_gpu["quantumoptics_mesolve_N_gpu"]),)
 
 mesolve_quantumtoolbox_N_cpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N_cpu["quantumtoolbox_mesolve_N_cpu"]),)
 mesolve_quantumtoolbox_N_gpu = (times=convert(Vector{Vector{Float64}}, quantumtoolbox_results_N_gpu["quantumtoolbox_mesolve_N_gpu"]),)
 
-N_list = floor.(Int, range(10, 800, 10))
+N_list_cpu = 2:10
+N_list_gpu = 2:12
 
 mesolve_times_N_cpu = [
     [1e-9 * sum(mm) / length(mm) for mm in m.times] for
-    m in [mesolve_quantumtoolbox_N_cpu, mesolve_qutip_N_cpu, mesolve_dynamiqs_N_cpu]
+    m in [mesolve_quantumtoolbox_N_cpu, mesolve_quantumoptics_N_cpu, mesolve_qutip_N_cpu, mesolve_dynamiqs_N_cpu]
 ]
 mesolve_times_N_gpu = [
     [1e-9 * sum(mm) / length(mm) for mm in m.times] for
@@ -95,6 +96,9 @@ mesolve_times_N_gpu = [
 mesolve_times_x = [1,2,3,4]
 mcsolve_times_x = [1,2,3,4]
 smesolve_times_x = [1,2,3,4]
+
+mcsolve_ymin = 1e-2
+smesolve_ymin = 4e-1
 
 # %% [markdown]
 
@@ -114,18 +118,22 @@ ax_mesolve = Axis(
 )
 ax_mcsolve = Axis(
     grid_me_mc_sme[1, 2],
+    yscale = log10,
 )
 ax_smesolve = Axis(
     grid_me_mc_sme[1, 3],
+    yscale = log10,
 )
 ax_mesolve_vs_N_cpu = Axis(
     grid_me_vs_N[1, 1],
     ylabel="Time (s)",
+    xticks = (N_list_cpu, [L"2^{%$N}" for N in N_list_cpu]),
     yscale = log10,
     xlabel = "Hilbert space dimension",
 )
 ax_mesolve_vs_N_gpu = Axis(
     grid_me_vs_N[1, 2],
+    xticks = (N_list_gpu, [L"2^{%$N}" for N in N_list_gpu]),
     yscale = log10,
     xlabel = "Hilbert space dimension",
 )
@@ -148,22 +156,24 @@ barplot!(ax_mcsolve,
     mcsolve_times_x,
     mcsolve_times,
     # dodge=1:length(mcsolve_times), 
-    color=colors[mcsolve_times_x]
+    color=colors[mcsolve_times_x],
+    fillto=mcsolve_ymin,
 )
 
 barplot!(ax_smesolve,
     smesolve_times_x,
     smesolve_times,
     # dodge=1:length(smesolve_times), 
-    color=colors[smesolve_times_x]
+    color=colors[smesolve_times_x],
+    fillto=smesolve_ymin,
 )
 
 elements = [MarkerElement(color = colors[i], marker = markers[i]) for i in 1:length(labels)]
 Legend(fig[1, 1], elements, labels, orientation=:horizontal, colgap = 20, patchlabelgap = 0)
 
 ylims!(ax_mesolve, 0, nothing)
-ylims!(ax_mcsolve, 0, nothing)
-ylims!(ax_smesolve, 0, nothing)
+ylims!(ax_mcsolve, mcsolve_ymin, nothing)
+ylims!(ax_smesolve, smesolve_ymin, nothing)
 
 hidexdecorations!(ax_mesolve)
 hidexdecorations!(ax_mcsolve)
@@ -171,11 +181,12 @@ hidexdecorations!(ax_smesolve)
 
 # Hilbert space dimension N plots
 
-# for (i, m) in Iterators.reverse(enumerate(mesolve_times_N_cpu))
-#     scatterlines!(ax_mesolve_vs_N_cpu, N_list[4:end], m[4:end], color=colors[i], marker=markers[i])
-# end
+for (i, m) in Iterators.reverse(enumerate(mesolve_times_N_cpu))
+    scatterlines!(ax_mesolve_vs_N_cpu, N_list_cpu[4:end], m[4:end], color=colors[i], marker=markers[i])
+end
 for (i, m) in Iterators.reverse(enumerate(mesolve_times_N_gpu))
-    scatterlines!(ax_mesolve_vs_N_gpu, N_list[4:length(m)], m[4:end], color=colors[i], marker=markers[i])
+    xlist = i == 3 ? N_list_gpu[1:end-2] : N_list_gpu
+    scatterlines!(ax_mesolve_vs_N_gpu, xlist[4:end], m[4:end], color=colors[i], marker=markers[i])
 end
 
 # Labels
@@ -185,11 +196,11 @@ text!(ax_smesolve, 0.0, 1.0, text = "(c)", align = (:left, :top), space = :relat
 text!(ax_mesolve_vs_N_cpu, 0.0, 1.0, text = "(d)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
 text!(ax_mesolve_vs_N_gpu, 0.0, 1.0, text = "(e)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
 
-text!(ax_mesolve, 0.5, 1.0, text = "mesolve", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
-text!(ax_mcsolve, 0.5, 1.0, text = "mcsolve", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
-text!(ax_smesolve, 0.5, 1.0, text = "smesolve", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
-text!(ax_mesolve_vs_N_cpu, 0.5, 1.0, text = "mesolve (CPU)", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
-text!(ax_mesolve_vs_N_gpu, 0.5, 1.0, text = "mesolve (GPU)", align = (:right, :top), space = :relative, offset=(-10, -1), font=:bold)
+text!(ax_mesolve, 0.0, 1.0, text = "mesolve", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
+text!(ax_mcsolve, 0.0, 1.0, text = "mcsolve", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
+text!(ax_smesolve, 0.0, 1.0, text = "smesolve", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
+text!(ax_mesolve_vs_N_cpu, 0.0, 1.0, text = "mesolve (CPU)", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
+text!(ax_mesolve_vs_N_gpu, 0.0, 1.0, text = "mesolve (GPU)", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
 
 rowgap!(fig.layout, 5)
 colgap!(grid_me_mc_sme, 7)
@@ -201,8 +212,8 @@ rowsize!(grid_plots, 2, Relative(0.55))
 # save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
 
 # For the README file in the GitHub repository
-# Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
-# save(joinpath(@__DIR__, "../../figures/benchmarks.svg"), fig, pt_per_unit = 2.0)
+Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
+save(joinpath(@__DIR__, "../../figures/benchmarks.svg"), fig, pt_per_unit = 2.0)
 
 fig
 
