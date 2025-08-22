@@ -1,6 +1,8 @@
 using LinearAlgebra
 using QuantumToolbox
 using QuantumToolbox: getVal
+using SciMLSensitivity
+using Enzyme
 using BenchmarkTools
 using JSON
 
@@ -148,6 +150,44 @@ function quantumtoolbox_mesolve_gpu(N, system_type::Val)
     return benchmark_result.times
 end
 
+coef_Δ(p, t) = p[1]
+coef_F(p, t) = p[2]
+coef_γ1(p, t) = p[3] * (1 + nth)
+coef_γ2(p, t) = p[3] * nth
+
+function quantumtoolbox_autodiff(N)
+    a = destroy(N)
+    H = QobjEvo(a' * a, coef_Δ) + -U / 2 * a'^2 * a^2 + QobjEvo(a + a', coef_F)
+    c_ops = [QobjEvo(lindblad_dissipator(a), coef_γ1), QobjEvo(lindblad_dissipator(a'), coef_γ2)]
+    L = liouvillian(H, c_ops)
+
+    ψ0 = fock(N, 0)
+
+    tlist = range(0, 10, 100)
+
+    function my_f_mesolve(p)
+        sol = mesolve(
+            L,
+            ψ0,
+            tlist,
+            progress_bar = Val(false),
+            params = p,
+            sensealg = InterpolatingAdjoint(autojacvec = EnzymeVJP(), checkpointing=true),
+        )
+
+        return real(expect(a' * a, sol.states[end]))
+    end
+
+    params = [1.0, 1.0, 1.0]
+
+    dparams = make_zero(params)
+    Enzyme.autodiff(set_runtime_activity(Reverse), Const(my_f_mesolve), Active, Duplicated(params, dparams)) # Warm-up
+
+    benchmark_result = @benchmark Enzyme.autodiff(set_runtime_activity(Reverse), Const($my_f_mesolve), Active, Duplicated($params, $dparams))
+
+    return benchmark_result.times
+end
+
 # %%
 
 if !run_gpu
@@ -183,6 +223,19 @@ if !run_gpu
     )
 
     output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results_N_cpu.json")
+    open(output_path, "w") do file
+        JSON.print(file, results)
+    end
+
+    # ---- AUTODIFF ----
+
+    N = 100
+
+    results = Dict(
+        "quantumtoolbox_autodiff" => quantumtoolbox_autodiff(N),
+    )
+
+    output_path = joinpath(@__DIR__, "quantumtoolbox_benchmark_results_autodiff.json")
     open(output_path, "w") do file
         JSON.print(file, results)
     end

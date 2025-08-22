@@ -13,4 +13,7 @@ This repository contains the code used to generate the figures in the paper abou
     - `make quantumtoolbox-benchmark`
 
 > [!NOTE]
+> If you want to run the benchmarks on the GPU, set the environment variable `RUN_GPU_BENCHMARK` to `true`.
+
+> [!NOTE]
 > All the following commands should be run under the root folder of this repository: `/path/to/QuantumToolbox.jl-Paper-Figures/`

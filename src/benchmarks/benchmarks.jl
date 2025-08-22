@@ -93,9 +93,18 @@ mesolve_times_N_gpu = [
     m in [mesolve_quantumtoolbox_N_gpu, mesolve_quantumoptics_N_gpu, mesolve_qutip_N_gpu, mesolve_dynamiqs_N_gpu]
 ]
 
+quantumtoolbox_autodiff_results = JSON.parsefile("julia/quantumtoolbox_benchmark_results_autodiff.json")["quantumtoolbox_autodiff"]
+qutip_autodiff_results = JSON.parsefile("python/qutip_benchmark_results_autodiff.json")
+dynamiqs_autodiff_results = JSON.parsefile("python/dynamiqs_benchmark_results_autodiff.json")
+
+quantumtoolbox_autodiff_results = 1e-9 * sum(quantumtoolbox_autodiff_results) / length(quantumtoolbox_autodiff_results)
+qutip_autodiff_results = 1e-9 * sum(qutip_autodiff_results) / length(qutip_autodiff_results)
+dynamiqs_autodiff_results = 1e-9 * sum(dynamiqs_autodiff_results) / length(dynamiqs_autodiff_results)
+
 mesolve_times_x = [1,2,3,4]
 mcsolve_times_x = [1,2,3,4]
 smesolve_times_x = [1,2,3,4]
+autodiff_times_x = [1,2,3,4]
 
 mcsolve_ymin = 1e-2
 smesolve_ymin = 4e-1
@@ -124,6 +133,9 @@ ax_smesolve = Axis(
     grid_me_mc_sme[1, 3],
     yscale = log10,
 )
+ax_autodiff = Axis(
+    grid_me_mc_sme[1, 4],
+)
 ax_mesolve_vs_N_cpu = Axis(
     grid_me_vs_N[1, 1],
     ylabel="Time (s)",
@@ -140,7 +152,6 @@ ax_mesolve_vs_N_gpu = Axis(
 
 colors = Makie.wong_colors()
 markers = [:circle, :rect, :diamond, :xcross]
-markers_gpu = markers[[1, 3, 4]]
 
 labels = ["QuantumToolbox.jl", "QuantumOptics.jl", "QuTiP (Python)", "dynamiqs (Python)"]
 
@@ -168,16 +179,21 @@ barplot!(ax_smesolve,
     fillto=smesolve_ymin,
 )
 
+barplot!(ax_autodiff, autodiff_times_x, [quantumtoolbox_autodiff_results, 0, qutip_autodiff_results, dynamiqs_autodiff_results], color=colors[autodiff_times_x])
+text!(ax_autodiff, 2, 0, text = "N/A", align = (:center, :bottom), offset=(0, 2), color=colors[2])
+
 elements = [MarkerElement(color = colors[i], marker = markers[i]) for i in 1:length(labels)]
 Legend(fig[1, 1], elements, labels, orientation=:horizontal, colgap = 20, patchlabelgap = 0)
 
 ylims!(ax_mesolve, 0, nothing)
 ylims!(ax_mcsolve, mcsolve_ymin, nothing)
 ylims!(ax_smesolve, smesolve_ymin, nothing)
+ylims!(ax_autodiff, 0, nothing)
 
 hidexdecorations!(ax_mesolve)
 hidexdecorations!(ax_mcsolve)
 hidexdecorations!(ax_smesolve)
+hidexdecorations!(ax_autodiff)
 
 # Hilbert space dimension N plots
 
@@ -193,14 +209,16 @@ end
 text!(ax_mesolve, 0.0, 1.0, text = "(a)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
 text!(ax_mcsolve, 0.0, 1.0, text = "(b)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
 text!(ax_smesolve, 0.0, 1.0, text = "(c)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
-text!(ax_mesolve_vs_N_cpu, 0.0, 1.0, text = "(d)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
-text!(ax_mesolve_vs_N_gpu, 0.0, 1.0, text = "(e)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
+text!(ax_autodiff, 0.0, 1.0, text = "(d)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
+text!(ax_mesolve_vs_N_cpu, 0.0, 1.0, text = "(e)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
+text!(ax_mesolve_vs_N_gpu, 0.0, 1.0, text = "(f)", align = (:left, :top), space = :relative, offset=(2, -1), font = :bold)
 
-text!(ax_mesolve, 0.0, 1.0, text = "mesolve", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
-text!(ax_mcsolve, 0.0, 1.0, text = "mcsolve", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
-text!(ax_smesolve, 0.0, 1.0, text = "smesolve", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
-text!(ax_mesolve_vs_N_cpu, 0.0, 1.0, text = "mesolve (CPU)", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
-text!(ax_mesolve_vs_N_gpu, 0.0, 1.0, text = "mesolve (GPU)", align = (:left, :top), space = :relative, offset=(17, -1), font=:bold)
+text!(ax_mesolve, 0.0, 1.0, text = "mesolve", align = (:left, :top), space = :relative, offset=(2, -13), font=:bold)
+text!(ax_mcsolve, 0.0, 1.0, text = "mcsolve", align = (:left, :top), space = :relative, offset=(2, -13), font=:bold)
+text!(ax_smesolve, 0.0, 1.0, text = "smesolve", align = (:left, :top), space = :relative, offset=(2, -13), font=:bold)
+text!(ax_autodiff, 0.0, 1.0, text = "AD", align = (:left, :top), space = :relative, offset=(2, -13), font=:bold)
+text!(ax_mesolve_vs_N_cpu, 0.0, 1.0, text = "mesolve (CPU)", align = (:left, :top), space = :relative, offset=(2, -13), font=:bold)
+text!(ax_mesolve_vs_N_gpu, 0.0, 1.0, text = "mesolve (GPU)", align = (:left, :top), space = :relative, offset=(2, -13), font=:bold)
 
 rowgap!(fig.layout, 5)
 colgap!(grid_me_mc_sme, 7)
@@ -212,8 +230,9 @@ rowsize!(grid_plots, 2, Relative(0.55))
 # save(joinpath(@__DIR__, "../../figures/benchmarks.pdf"), fig, pt_per_unit = 1.0)
 
 # For the README file in the GitHub repository
-Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
-save(joinpath(@__DIR__, "../../figures/benchmarks.svg"), fig, pt_per_unit = 2.0)
+# Label(fig[0, 1], "Performance Comparison with Other Packages (Lower is better)", tellwidth=false, halign=:center, fontsize=9)
+# rowgap!(fig.layout, 5)
+# save(joinpath(@__DIR__, "../../figures/benchmarks.svg"), fig, pt_per_unit = 2.0)
 
 fig
 

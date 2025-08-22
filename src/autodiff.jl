@@ -46,7 +46,6 @@ n_ss_deriv(Δ, F) = [
 F = 1.0
 params = [Δ, F]
 
-# The factor 2 is due to a bug
 grad_qt = Zygote.gradient(my_f_mesolve, params)[1]
 
 grad_exact = n_ss_deriv(Δ, F)

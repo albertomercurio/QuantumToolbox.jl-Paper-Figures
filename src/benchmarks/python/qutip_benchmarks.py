@@ -199,8 +199,58 @@ def qutip_mesolve_gpu(N, system_type, num_repeats=10):
 
         return [t * 1e9 for t in times]  # List of times in nanoseconds
 
+
+@jax.jit
+def coef_Δ(t, Δ, F, γ):
+    return Δ
+@jax.jit
+def coef_F(t, Δ, F, γ):
+    return F
+@jax.jit
+def coef_γ1(t, Δ, F, γ):
+    return γ * (1 + nth)
+@jax.jit
+def coef_γ2(t, Δ, F, γ):
+    return γ * nth
+
+def qutip_mesolve_autodiff(N, num_repeats):
+    with jax.default_device(jax.devices("cpu")[0]):
+        with qutip.CoreOptions(default_dtype="jaxdia"):
+            a = qutip.destroy(N)
+
+            ψ0 = initial_state(N, "nho")
+            tlist = jnp.linspace(0, 10, 100)
+
+            options = {
+                "normalize_output":False,
+                "store_final_state":True,
+                "method":"diffrax",
+            }
+
+            def my_f_mesolve(Delta, F, gamma):
+                H = Delta * a.dag() * a - U/2 * a.dag() * a.dag() * a * a + F * (a + a.dag())
+                c_ops = [jnp.sqrt(gamma * (1 + nth)) * a, jnp.sqrt(gamma * nth) * a.dag()]
+
+                result = qutip.mesolve(H, ψ0, tlist, c_ops, options=options)
+
+                return qutip.expect(a.dag() * a, result.states[-1]).real
+            
+            my_f_mesolve(1.0, 1.0, 1.0)
+
+            my_grad = jax.grad(my_f_mesolve, argnums=(0, 1, 2))
+
+            def perform_grad():
+                res = my_grad(1.0, 1.0, 1.0)
+                return jax.block_until_ready(res)
+            
+            # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
+            times = timeit.repeat(perform_grad, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
+
+            return [t * 1e9 for t in times[1:]]  # List of times in nanoseconds
+
+
 # %%
-    
+
 if not run_gpu:
     # Benchmark all cases
     N = 50
@@ -237,6 +287,16 @@ if not run_gpu:
 
     with open("src/benchmarks/python/qutip_benchmark_results_N_cpu.json", "w") as f:
         json.dump(benchmark_results_N, f, indent=4)
+
+    # %% ---- AUTODIFF ----
+
+    N = 100
+
+    results = qutip_mesolve_autodiff(N, num_repeats=2)
+
+    # Save results to JSON
+    with open("src/benchmarks/python/qutip_benchmark_results_autodiff.json", "w") as f:
+        json.dump(results, f, indent=4)
 else:
     qutip_mesolve_N_gpu = [] # In this way it is safe if it fails due to lack of GPU memory
     for N in tqdm(N_list_gpu):

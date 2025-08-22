@@ -81,7 +81,7 @@ def dynamiqs_mesolve(N, system_type, num_repeats=100):
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=e_ops, options=options, method=method).expects
+        jax.block_until_ready(dynamiqs.mesolve(H, c_ops, ψ0, tlist, exp_ops=e_ops, options=options, method=method).expects)
 
     solve() # Warm-up
 
@@ -113,7 +113,7 @@ def dynamiqs_mcsolve(N, system_type, ntraj, num_repeats=100):
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.jssesolve(H, c_ops, ψ0, tlist, keys, exp_ops=e_ops, options=options, method=method).expects
+        jax.block_until_ready(dynamiqs.jssesolve(H, c_ops, ψ0, tlist, keys, exp_ops=e_ops, options=options, method=method).expects)
 
     solve() # Warm-up
 
@@ -148,12 +148,42 @@ def dynamiqs_smesolve(N, ntraj, num_repeats=100):
 
     # Define the statement to benchmark
     def solve():
-        dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], method=method, options=options).block_until_ready()
+        jax.block_until_ready(dynamiqs.dsmesolve(H, sc_ops, etas, ψ0, tlist, keys, exp_ops=[a.dag() @ a], method=method, options=options).expects)
 
     solve() # Warm-up
 
     # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
     times = timeit.repeat(solve, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
+
+    return [t * 1e9 for t in times[1:]]  # List of times in nanoseconds
+
+def dynamiqs_mesolve_autodiff(N, num_repeats):
+    a = dynamiqs.destroy(N)
+
+    ψ0 = dynamiqs.fock(N, 0)
+    tlist = jnp.linspace(0, 10, 100)
+
+    options = dynamiqs.Options(progress_meter = False, save_states=False)
+    method = dynamiqs.method.Tsit5(rtol=1e-6, atol=1e-8)
+
+    def my_f_mesolve(Delta, F, gamma):
+        H = Delta * a.dag() @ a - U/2 * a.dag() @ a.dag() @ a @ a + F * (a + a.dag())
+        c_ops = [jnp.sqrt(gamma * (1 + nth)) * a, jnp.sqrt(gamma * nth) * a.dag()]
+
+        result = dynamiqs.mesolve(H, c_ops, ψ0, tlist, options=options, method=method)
+
+        return dynamiqs.expect(a.dag() @ a, result.states[-1]).real
+
+    my_grad = jax.grad(my_f_mesolve, argnums=(0, 1, 2))
+
+    def perform_grad():
+        res = my_grad(1.0, 1.0, 1.0)
+        return jax.block_until_ready(res)
+
+    perform_grad()  # Warm-up
+
+    # Run the benchmark using timeit. We run it one more time to remove the precompilation time of the first call
+    times = timeit.repeat(perform_grad, repeat=num_repeats+1, number=1)  # number=1 ensures individual execution times
 
     return [t * 1e9 for t in times[1:]]  # List of times in nanoseconds
 
@@ -201,6 +231,17 @@ if not run_gpu:
 
     with open("src/benchmarks/python/dynamiqs_benchmark_results_N_cpu.json", "w") as f:
         json.dump(benchmark_results_N, f, indent=4)
+
+    # %% ---- AUTODIFF ----
+
+    N = 100
+
+    results = dynamiqs_mesolve_autodiff(N, num_repeats=2)
+
+    # Save results to JSON
+    with open("src/benchmarks/python/dynamiqs_benchmark_results_autodiff.json", "w") as f:
+        json.dump(results, f, indent=4)
+
 else:
     dynamiqs.set_device("gpu")
 
