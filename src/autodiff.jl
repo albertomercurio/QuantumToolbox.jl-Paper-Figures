@@ -7,22 +7,20 @@ include("_cairomakie_setup.jl")
 
 # %%
 
-const N = 20
-const a = destroy(N)
-const γ = 1.0
+const N  = 20
+const a  = destroy(N)
+const ωc = 5.0
+const γ  = 1.0
 
-coef_Δ(p, t) = p[1]
-coef_F(p, t) = p[2]
+coef_a(p, t) = p[2] * exp(1im * p[1] * t)
 
-H = QobjEvo(a' * a, coef_Δ) + QobjEvo(a + a', coef_F)
+H = ωc * a' * a + QobjEvo(a, coef_a) + QobjEvo(a', conj ∘ coef_a)
 c_ops = [sqrt(γ) * a]
 const L = liouvillian(H, c_ops)
-
 const ψ0 = fock(N, 0)
+const tlist = range(0, 40, 100)
 
 function my_f_mesolve(p)
-    tlist = range(0, 40, 100)
-
     sol = mesolve(
         L,
         ψ0,
@@ -36,44 +34,50 @@ function my_f_mesolve(p)
 end
 
 # Analytical solution
-n_ss(Δ, F) = abs2(F / (Δ + 1im * γ / 2))
-n_ss_deriv(Δ, F) = [
-    - 2 * F^2 * Δ / (Δ^2 + γ^2 / 4)^2,
-    2 * F / (Δ^2 + γ^2 / 4),
+n_ss(ωd, F) = abs2(F / ((ωc - ωd) + 1im * γ / 2))
+n_ss_deriv(ωd, F) = [
+    2 * F^2 * (ωc - ωd) / ((ωc - ωd)^2 + γ^2 / 4)^2,
+    2 * F / ((ωc - ωd)^2 + γ^2 / 4),
 ]
 
-Δ = 1.0
+ωd = 1.0
 F = 1.0
-params = [Δ, F]
+params = [ωd, F]
 
 grad_qt = Zygote.gradient(my_f_mesolve, params)[1]
 
-grad_exact = n_ss_deriv(Δ, F)
+grad_exact = n_ss_deriv(ωd, F)
 
 # %%
 
-Δ_list = range(-1, 1, 200)
+ωd_list = ωc .- range(-1, 1, 200)
 
-deriv_analytical_Δ = map(Δ_list) do Δ
-    n_ss_deriv(Δ, F)[1]
+pr = ProgressBar(length(ωd_list))
+deriv_analytical_ωd = map(ωd_list) do ωd
+    res = n_ss_deriv(ωd, F)[1]
+    next!(pr)
+    return res
 end
 
-deriv_numerical_Δ = map(Δ_list) do Δ
-    Zygote.gradient(my_f_mesolve, [Δ, F])[1][1]
+pr = ProgressBar(length(ωd_list))
+deriv_numerical_ωd = map(ωd_list) do ωd
+    res = Zygote.gradient(my_f_mesolve, [ωd, F])[1][1]
+    next!(pr)
+    return res
 end
 
 # %%
 
 fig = Figure(size=(plot_figsize_width_single_column_pt, 0.6 * plot_figsize_width_single_column_pt))
-ax = Axis(fig[1, 1], xlabel = L"\Delta", ylabel = L"\partial \langle \hat{a}^\dagger \hat{a} \rangle_\mathrm{ss} / \partial \Delta")
+ax = Axis(fig[1, 1], xlabel = L"\omega_c - \omega_d", ylabel = L"\partial \langle \hat{a}^\dagger \hat{a} \rangle_\mathrm{ss} / \partial \omega_d")
 
-lines!(ax, Δ_list, deriv_analytical_Δ, color = :dodgerblue4, label = "Analytical")
-lines!(ax, Δ_list, deriv_numerical_Δ, color = Makie.wong_colors()[2], label = "AD", linestyle = :dash)
+lines!(ax, ωc .- ωd_list, deriv_analytical_ωd, color = :dodgerblue4, label = "Analytical")
+lines!(ax, ωc .- ωd_list, deriv_numerical_ωd, color = Makie.wong_colors()[2], label = "AD", linestyle = :dash)
 
 axislegend(ax, padding=0)
 
 # --- LIMITS ---
-xlims!(ax, Δ_list[1], Δ_list[end])
+xlims!(ax, ωc - ωd_list[1], ωc - ωd_list[end])
 
 # --- SAVING ---
 save(joinpath(@__DIR__, "../figures/autodiff.pdf"), fig, pt_per_unit = 1.0)
