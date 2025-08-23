@@ -350,7 +350,7 @@ poly!(fig.scene, collect(zip(poly_x, poly_y)); poly_kwargs...)
 
 scatter!(fig.scene, [snapshot_point1, snapshot_point2, snapshot_point3]; color=:grey, markersize=8, marker=:rect)
 
-save(joinpath(@__DIR__, "../../figures/dynamical_shifted_fock.pdf"), fig, pt_per_unit=1)
+save(joinpath(@__DIR__, "../../figures/dynamical_shifted_fock_JC.pdf"), fig, pt_per_unit=1)
 
 fig
 
