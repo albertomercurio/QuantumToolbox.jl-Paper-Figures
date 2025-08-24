@@ -116,7 +116,7 @@ c_ops0 = [√γc*a0, √γa*σm0]
 
 ψ0 = kron(fock(N0, 0), basis(2, 1))
 
-tlist = range(0, 15/γ, 1000)
+tlist = range(0, 15, 1000)
 tlist_save = [tlist[1], 2.2, 0.9*tlist[end]]
 
 sol = mesolve(H0, ψ0, tlist, c_ops0, e_ops=[a0'*a0, a0], saveat=tlist_save);

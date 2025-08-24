@@ -35,9 +35,12 @@ c_ops0 = [√κ1 * a10, √κ2 * a20, √κ2_2 * a20^2]
 
 ρ0   = kron(fock(N01, 0), fock(N02, 0)) |> cu
 
-sol0 = mesolve(H0, ρ0, tlist, c_ops0, e_ops=[a10'*a10, a20'*a20, a10, a20], saveat=tlist_save);
+sol0 = mesolve(H0, ρ0, tlist, c_ops0, e_ops=[a10'*a10, a20'*a20, a10, a20], saveat=tlist_save)
 
 # %%
+
+xvec = range(-15, 15, 200)
+yvec = xvec
 
 fig = Figure()
 ax1 = Axis(fig[1,1]; xlabel=L"t", ylabel="Photon number", title="Jaynes-Cummings model")
@@ -102,8 +105,8 @@ Jumps₂ = [a₂1, a₂2, a₂2^2]
 rates₂ = [κ1₂, κ2₂, κ2_2₂]
 
 # Derive a set of equations
-ops = [a₂1'*a₂1, a₂2'*a₂2, a₂1, a₂2]
-eqs = meanfield(ops,H₂,Jumps₂;rates=rates₂,order=2)
+ops = [a₂1, a₂2]
+eqs = meanfield(ops,H₂,Jumps₂;rates=rates₂, order=2)
 
 # Expand the above equations to second order
 eqs_expanded = ModelingToolkit.complete(eqs);
@@ -113,10 +116,6 @@ eqs_expanded = ModelingToolkit.complete(eqs);
 
 # Solve the system using the OrdinaryDiffEq package
 u0 = zeros(ComplexF64, length(eqs_expanded))
-u0[1] = abs2(0)
-u0[2] = abs2(0)
-u0[3] = 0
-u0[4] = 0
 
 p = (Δ1₂, Δ2₂, F₂, U₂, κ1₂, κ2₂, κ2_2₂, J₂)
 p0 = p .=> (Δ1, Δ2, F, U, κ1, κ2, κ2_2, J)
