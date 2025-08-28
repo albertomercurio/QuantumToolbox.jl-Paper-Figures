@@ -2,7 +2,7 @@
 
 julia_version = "1.11.6"
 manifest_format = "2.0"
-project_hash = "1c5309578ffe5e135fb95e2303746d9ecc3482dd"
+project_hash = "77efe23478a25b3ec28ba30bf3ad745bafa04f02"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "60665b326b75db6517939d0e1875850bc4a54368"
@@ -301,7 +301,7 @@ version = "5.8.3"
     SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [[deps.CUDA_Compiler_jll]]
-deps = ["Artifacts", "CUDA_Driver_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
+deps = ["Artifacts", "CUDA_Driver_jll", "CUDA_Runtime_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "TOML"]
 git-tree-sha1 = "fdb9ddf3e08e2aca4c84b3252df2dea046caadee"
 uuid = "d1e2174e-dfdc-576e-b43e-73b79eb1aca8"
 version = "0.2.0+1"
@@ -511,6 +511,30 @@ deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "Inver
 git-tree-sha1 = "fb61b4812c49343d7ef0b533ba982c46021938a6"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 version = "1.7.0"
+
+[[deps.DataInterpolations]]
+deps = ["EnumX", "FindFirstFunctions", "ForwardDiff", "LinearAlgebra", "PrettyTables", "RecipesBase", "Reexport"]
+git-tree-sha1 = "d8a84dc566622fce3c9bca8c5341006ff1cec491"
+uuid = "82cc6244-b520-54b8-b5a6-8a565e85f1d0"
+version = "8.5.0"
+
+    [deps.DataInterpolations.extensions]
+    DataInterpolationsChainRulesCoreExt = "ChainRulesCore"
+    DataInterpolationsMakieExt = "Makie"
+    DataInterpolationsOptimExt = "Optim"
+    DataInterpolationsRegularizationToolsExt = "RegularizationTools"
+    DataInterpolationsSparseConnectivityTracerExt = ["SparseConnectivityTracer", "FillArrays"]
+    DataInterpolationsSymbolicsExt = "Symbolics"
+
+    [deps.DataInterpolations.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
+    Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+    Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+    RegularizationTools = "29dad682-9a27-4bc3-9c72-016788665182"
+    SparseConnectivityTracer = "9f842d2f-2579-4b1d-911e-f412cf18a3f5"
+    Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+    Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -1228,10 +1252,10 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 version = "1.11.0"
 
 [[deps.Interpolations]]
-deps = ["Adapt", "AxisAlgorithms", "ChainRulesCore", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "Requires", "SharedArrays", "SparseArrays", "StaticArrays", "WoodburyMatrices"]
-git-tree-sha1 = "f2905febca224eade352a573e129ef43aa593354"
+deps = ["Adapt", "AxisAlgorithms", "ChainRulesCore", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "SharedArrays", "SparseArrays", "StaticArrays", "WoodburyMatrices"]
+git-tree-sha1 = "65d505fa4c0d7072990d659ef3fc086eb6da8208"
 uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
-version = "0.16.1"
+version = "0.16.2"
 weakdeps = ["ForwardDiff", "Unitful"]
 
     [deps.Interpolations.extensions]
@@ -1707,6 +1731,12 @@ version = "0.3.29"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 version = "1.11.0"
+
+[[deps.MKL]]
+deps = ["Artifacts", "Libdl", "LinearAlgebra", "Logging", "MKL_jll"]
+git-tree-sha1 = "fc3df8a0c3447fefe3607e5576de8c69ec6800ea"
+uuid = "33e6dc65-8f57-5167-99aa-e5a354878fb2"
+version = "0.9.0"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
