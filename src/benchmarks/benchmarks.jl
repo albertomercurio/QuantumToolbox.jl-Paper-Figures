@@ -107,7 +107,7 @@ smesolve_times_x = [1,2,3,4]
 autodiff_times_x = [1,2,3,4]
 
 mcsolve_ymin = 1e-2
-smesolve_ymin = 4e-1
+smesolve_ymin = 0
 
 # %% [markdown]
 
@@ -131,7 +131,7 @@ ax_mcsolve = Axis(
 )
 ax_smesolve = Axis(
     grid_me_mc_sme[1, 3],
-    yscale = log10,
+    # yscale = log10,
 )
 ax_autodiff = Axis(
     grid_me_mc_sme[1, 4],
