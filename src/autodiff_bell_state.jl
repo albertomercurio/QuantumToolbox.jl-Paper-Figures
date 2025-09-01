@@ -98,8 +98,7 @@ function optimize_parameters(params, params_ub, params_lb; maxiter=100)
     loss_history = Vector{Float64}(undef, maxiter)
 
 
-    # params0 = clamp.(params, params_lb, params_ub)
-    params0 = copy(params)
+    params0 = clamp.(params, params_lb, params_ub)
     state = Optimisers.setup(Optimisers.Adam(0.01), params0)
 
     params_history[:, 1] .= params0
@@ -109,8 +108,7 @@ function optimize_parameters(params, params_ub, params_lb; maxiter=100)
         grad = Zygote.gradient(loss, params)[1]
         state, params = Optimisers.update(state, params, grad)  # at every stepd
 
-
-        # params .= clamp.(params, params_lb, params_ub)
+        params .= clamp.(params, params_lb, params_ub)
 
         loss_tmp = loss(params)
         println("Step $i: Loss = ", loss_tmp)
@@ -124,12 +122,36 @@ function optimize_parameters(params, params_ub, params_lb; maxiter=100)
 end
 
 # %%
-
-params = fill(0.1, 2 * nsteps) .+ 1e-3 .* randn(2 * nsteps)
+# for both Hadamard and CNOT parameters
+# set the initial guess of starting and ending points at 0
+params = [
+    0.0; 
+    fill(0.1, nsteps - 2) .+ 1e-3 .* randn(nsteps - 2);
+    0.0;
+    0.0; 
+    fill(0.1, nsteps - 2) .+ 1e-3 .* randn(nsteps - 2);
+    0.0;
+]
+params_lb = [
+    -1e-3; 
+    fill(-1.0, nsteps - 2);
+    -1e-3;
+    -1e-3; 
+    fill(-1.0, nsteps - 2) .+ 1e-3 .* randn(nsteps - 2);
+    -1e-3;
+]
+params_ub = [
+    1e-3; 
+    fill(1.0, nsteps - 2);
+    1e-3;
+    1e-3; 
+    fill(1.0, nsteps - 2) .+ 1e-3 .* randn(nsteps - 2);
+    1e-3;
+]
 loss(params)
 Zygote.gradient(loss, params)[1]
 
-params_history, loss_history = optimize_parameters(params, nothing, nothing; maxiter=200)
+params_history, loss_history = optimize_parameters(params, params_ub, params_lb; maxiter=200)
 
 # %%
 
@@ -167,9 +189,9 @@ axislegend(ax_pulse_shape_opt, padding=(0, 2, 0, 5))
 xlims!(ax_loss, 1, length(loss_history))
 ylims!(ax_loss, nothing, 1)
 
-xlims!(ax_pulse_shape, γ * tlist[1], γ * tlist[end])
-
-xlims!(ax_pulse_shape_opt, γ * tlist[1], γ * tlist[end])
+dt = 0.5 # make the x limit slightly wider
+xlims!(ax_pulse_shape, γ * (tlist[1] - dt), γ * (tlist[end] + dt))
+xlims!(ax_pulse_shape_opt, γ * (tlist[1] - dt), γ * (tlist[end] + dt))
 
 # ---- DECORATIONS
 
