@@ -13,8 +13,8 @@ include("interpolations.jl")
 #
 
 smooth_heaviside(t, t0, σ) = 1 / (1 + exp(-(t - t0) / σ))
-coef_hadamard_smooth(p, t) = smooth_heaviside(t, 0, p[4]) * (1 - smooth_heaviside(t, p[1], p[4]))
-coef_CNOT_smooth(p, t) = smooth_heaviside(t, p[2], p[4]) * (1 - smooth_heaviside(t, p[2] + p[3], p[4]))
+coef_hadamard_smooth(p, t) = smooth_heaviside(t, 5*p[4], p[4]) * (1 - smooth_heaviside(t, p[1], p[4]))
+coef_CNOT_smooth(p, t) = smooth_heaviside(t, p[2], p[4]) * (1 - smooth_heaviside(t, p[2] + p[3] - 5*p[4], p[4]))
 coef_γ(p, t) = sqrt(p[5])
 
 γ = 1e-4
