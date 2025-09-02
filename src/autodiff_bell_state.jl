@@ -17,7 +17,7 @@ coef_hadamard_smooth(p, t) = smooth_heaviside(t, 5*p[4], p[4]) * (1 - smooth_hea
 coef_CNOT_smooth(p, t) = smooth_heaviside(t, p[2], p[4]) * (1 - smooth_heaviside(t, p[2] + p[3] - 5*p[4], p[4]))
 coef_γ(p, t) = sqrt(p[5])
 
-γ = 1e-4
+γ = 1e-2
 const nsteps = 100
 const tlist = range(0, 100, nsteps)
 t_ratio = last(tlist) / π
@@ -134,24 +134,24 @@ params = [
 ]
 params_lb = [
     -1e-3; 
-    fill(-1.0, nsteps - 2);
+    fill(-5, nsteps - 2);
     -1e-3;
     -1e-3; 
-    fill(-1.0, nsteps - 2) .+ 1e-3 .* randn(nsteps - 2);
+    fill(-5, nsteps - 2) .+ 1e-3 .* randn(nsteps - 2);
     -1e-3;
 ]
 params_ub = [
     1e-3; 
-    fill(1.0, nsteps - 2);
+    fill(5, nsteps - 2);
     1e-3;
     1e-3; 
-    fill(1.0, nsteps - 2) .+ 1e-3 .* randn(nsteps - 2);
+    fill(5, nsteps - 2) .+ 1e-3 .* randn(nsteps - 2);
     1e-3;
 ]
 loss(params)
 Zygote.gradient(loss, params)[1]
 
-params_history, loss_history = optimize_parameters(params, params_ub, params_lb; maxiter=200)
+params_history, loss_history = optimize_parameters(params, params_ub, params_lb; maxiter=1000)
 
 # %%
 
@@ -182,11 +182,11 @@ lines!(ax_pulse_shape_opt, tlist_itp .* γ, coef_CNOT_opt, label=L"f_\mathrm{CNO
 # ---- LEGENDS
 
 axislegend(ax_pulse_shape, padding=(0, 2, 0, 5))
-axislegend(ax_pulse_shape_opt, padding=(0, 2, 0, 5))
+axislegend(ax_pulse_shape_opt, padding=(0, 0, 0, 0), position=(0.0, 1), align=(:left, :top))
 
 # ---- LIMITS
 
-xlims!(ax_loss, 1, length(loss_history))
+xlims!(ax_loss, 0, length(loss_history))
 ylims!(ax_loss, nothing, 1)
 
 dt = 0.5 # make the x limit slightly wider
@@ -205,7 +205,7 @@ rowgap!(fig.layout, 7)
 
 text!(ax_loss, 1.0, 0.0, text = "(a)", align = (:right, :bottom), space = :relative, offset=(-2, 5), font = :bold)
 text!(ax_pulse_shape, 1.0, 0.0, text = "(b)", align = (:right, :bottom), space = :relative, offset=(-2, 5), font = :bold)
-text!(ax_pulse_shape_opt, 1.0, 0.0, text = "(c)", align = (:right, :bottom), space = :relative, offset=(-2, 5), font = :bold)
+text!(ax_pulse_shape_opt, 1.0, 0.0, text = "(c)", align = (:right, :bottom), space = :relative, offset=(-10, 5), font = :bold)
 
 # ---- SAVE
 
